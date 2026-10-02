@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>ZT Рядом на терминале</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+/* Раскладка: страница-подложка (тема зрителя) → рамка терминала 1280×800, вписанная по ширине.
+   Экран терминала всегда светлый — это фирменный стиль ZT на устройстве, а не тема браузера. */
+:root{
+  /* подложка страницы — следует теме */
+  --page:#ECECF2;--page-ink:#1C1C28;--page-muted:#555770;--page-line:#D9D9E3;--page-card:#FFFFFF;--page-accent:#5E32BE;
+  /* экран терминала — фирменный ZT, одинаковый в обеих темах */
+  --purple:#683DCC;--purple-d:#5E32BE;--purple-l:#EEE5FF;
+  --green:#00BF7F;--green-d:#05A660;--green-l:#E3FFF1;
+  --orange-d:#B35F00;--orange-l:#FFF8E5;
+  --red:#E53535;--red-l:#FFE5E5;--blue-d:#0052CC;--blue-l:#E5F0FF;
+  --ink:#1C1C28;--text:#28293D;--muted:#555770;--faint:#8F90A6;--line:#E4E4EB;--line2:#EBEBF0;
+  --bg:#F2F2F5;--card:#FFFFFF;--soft:#FAFAFC;--bezel:#23232F;
+  --font:'Golos Text',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--page:#14141B;--page-ink:#EDEDF3;--page-muted:#A6A7BC;--page-line:#2C2C3A;--page-card:#1D1D27;--page-accent:#B79BFF;color-scheme:dark}}
+:root[data-theme="dark"]{--page:#14141B;--page-ink:#EDEDF3;--page-muted:#A6A7BC;--page-line:#2C2C3A;--page-card:#1D1D27;--page-accent:#B79BFF;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--page-ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #8E6ED9;outline-offset:2px}
+
+/* ---------- подложка ---------- */
+.shell{max-width:1320px;margin:0 auto;padding-block:20px 40px;padding-inline:16px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.top h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.top h1 small{display:block;font-size:13px;font-weight:400;color:var(--page-muted);letter-spacing:0}
+.top .sp{flex:1}
+.who{display:flex;flex-wrap:wrap;gap:8px}
+.who button{border:1px solid var(--page-line);background:var(--page-card);color:var(--page-ink);border-radius:12px;padding:8px 14px;text-align:left;min-height:44px}
+.who button b{display:block;font-size:14px}
+.who button span{font-size:12px;color:var(--page-muted)}
+.who button.on{border-color:var(--page-accent);box-shadow:inset 0 0 0 1px var(--page-accent)}
+.stage{width:100%}
+.scaler{transform-origin:0 0;width:1280px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.note{background:var(--page-card);border:1px solid var(--page-line);border-radius:14px;padding:14px 16px;min-width:0}
+.note h2{margin:0 0 6px;font-size:14px;font-weight:700}
+.note p,.note ol{margin:0;color:var(--page-muted);font-size:13.5px}
+.note ol{padding-left:18px;display:grid;gap:4px}
+.note b{color:var(--page-ink);font-weight:600}
+
+/* ---------- корпус терминала ---------- */
+.device{width:1280px;height:800px;border-radius:26px;background:var(--bezel);padding:18px;box-shadow:0 30px 60px -30px rgba(20,20,40,.55)}
+.screen{position:relative;width:100%;height:100%;border-radius:10px;overflow:hidden;background:var(--bg);color:var(--text);font-size:18px;line-height:1.4;display:flex;flex-direction:column;color-scheme:light}
+.screen svg{flex-shrink:0}
+
+/* шапка терминала */
+.bar{height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--card);border-bottom:1px solid var(--line2)}
+.brand{display:flex;align-items:baseline;gap:8px;font-weight:700;color:var(--ink);font-size:22px;letter-spacing:-.01em}
+.brand .zt{color:var(--purple);font-weight:800;font-size:26px}
+.brand .zt i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-left:2px;vertical-align:2px}
+.place{color:var(--muted);font-size:15px;padding-left:16px;border-left:1px solid var(--line)}
+.bar .sp{flex:1}
+.langs{display:flex;gap:4px;background:var(--bg);border-radius:12px;padding:4px}
+.langs button{border:0;background:transparent;border-radius:9px;padding:6px 12px;font-size:15px;font-weight:500;color:var(--muted);min-height:36px}
+.langs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.timer{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);font-size:17px}
+.timer.low{color:var(--red)}
+.exit{display:flex;align-items:center;gap:8px;border:0;background:var(--ink);color:#fff;border-radius:12px;padding:0 18px;height:44px;font-weight:600;font-size:16px}
+
+.body{flex:1;min-height:0;display:flex}
+
+/* боковое меню */
+.rail{width:132px;flex-shrink:0;background:var(--card);border-right:1px solid var(--line2);display:flex;flex-direction:column;padding:12px 10px;gap:6px}
+.rail button{position:relative;border:0;background:transparent;border-radius:16px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:600;color:var(--muted)}
+.rail button svg{width:30px;height:30px}
+.rail button.on{background:var(--purple-l);color:var(--purple-d)}
+.rail .badge{position:absolute;top:12px;right:22px}
+.badge{min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.rail .help{margin-top:auto;min-height:64px;font-size:14px}
+
+.main{flex:1;min-width:0;display:flex}
+
+/* список родных */
+.people{width:340px;flex-shrink:0;border-right:1px solid var(--line2);background:var(--card);display:flex;flex-direction:column}
+.people h2{margin:0;padding:18px 20px 8px;font-size:24px;color:var(--ink)}
+.while{margin:4px 14px 10px;background:var(--green-l);color:#05603A;border-radius:14px;padding:12px 14px;font-size:15px}
+.while b{display:block;color:#044D2E;font-size:16px}
+.plist{overflow:auto;flex:1;padding:4px 8px 12px}
+.pi{width:100%;border:0;background:transparent;border-radius:16px;display:flex;align-items:center;gap:14px;padding:12px;text-align:left;min-height:84px}
+.pi.on{background:var(--purple-l)}
+.pi .grow{flex:1;min-width:0}
+.pi b{display:block;color:var(--ink);font-size:19px}
+.pi small{display:block;color:var(--muted);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:13px;color:var(--faint)}
+.av{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;flex-shrink:0;background:var(--purple);color:#fff}
+.av.r1{background:#0C8F65}.av.r2{background:#C2410C}.av.r3{background:#1D5FD1}
+.av.sm{width:44px;height:44px;font-size:16px}
+
+/* переписка */
+.chat{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.chead{height:76px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--card);border-bottom:1px solid var(--line2)}
+.chead .grow{flex:1;min-width:0}
+.chead b{display:block;font-size:20px;color:var(--ink)}
+.chead small{display:block;color:var(--muted);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act{display:flex;align-items:center;gap:8px;height:52px;padding:0 18px;border-radius:14px;border:0;background:var(--purple-l);color:var(--purple-d);font-weight:600;font-size:17px}
+.act.green{background:var(--green-l);color:#05603A}
+.act.locked{background:var(--bg);color:var(--faint)}
+.feed{flex:1;min-height:0;overflow:auto;padding:16px 28px 12px;display:flex;flex-direction:column;gap:10px}
+.day{align-self:center;font-size:14px;color:var(--muted);background:var(--card);border-radius:10px;padding:4px 12px;margin:8px 0 2px}
+.msg{max-width:68%;border-radius:20px;padding:12px 16px 8px;background:var(--card);align-self:flex-start;border-bottom-left-radius:6px}
+.msg.me{align-self:flex-end;background:var(--purple-l);border-bottom-left-radius:20px;border-bottom-right-radius:6px}
+.msg.bad{background:var(--card);border:2px solid var(--red-l)}
+.msg p{margin:0;color:var(--ink);white-space:pre-wrap}
+.msg .meta{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px;font-size:13px;color:var(--faint)}
+.msg .meta svg{width:18px;height:18px}
+.msg .meta.read{color:var(--green-d)}
+.msg .tag{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:4px}
+.msg .tag svg{width:16px;height:16px}
+.cut{background:repeating-linear-gradient(-45deg,#F3D9D9 0 6px,#FBEAEA 6px 12px);text-decoration:line-through;text-decoration-color:var(--red);color:#7A2A2A;border-radius:4px;padding:0 2px}
+.why{margin-top:8px;font-size:14px;color:#9B1C1C;background:var(--red-l);border-radius:10px;padding:6px 10px}
+.why.soft{color:#7A2A2A;background:#FBEFEF}
+.media{display:flex;align-items:center;gap:12px;min-width:260px}
+.media .play{width:44px;height:44px;border-radius:50%;border:0;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center}
+.media .wave{flex:1;height:28px;background:repeating-linear-gradient(90deg,var(--purple) 0 3px,transparent 3px 7px);mask:linear-gradient(90deg,#000,#000);opacity:.35;border-radius:4px}
+.media .vid{width:120px;height:80px;border-radius:12px;background:linear-gradient(135deg,#3A3A4D,#5A4A86);display:flex;align-items:center;justify-content:center;color:#fff}
+.ev{align-self:center;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:8px 14px;font-size:15px;color:var(--text);max-width:80%}
+.ev svg{width:20px;height:20px}
+.ev small{color:var(--faint)}
+.ev.green{background:var(--green-l);border-color:transparent;color:#05603A}
+.ev.warn{background:var(--orange-l);border-color:transparent;color:#7A4100}
+.ev.red{background:var(--red-l);border-color:transparent;color:#9B1C1C}
+.empty{margin:auto;max-width:460px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:22px;margin-bottom:6px}
+
+/* поле ввода */
+.compose{flex-shrink:0;background:var(--card);border-top:1px solid var(--line2);padding:10px 16px 12px;display:flex;flex-direction:column;gap:10px}
+.quick{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.quick button{flex-shrink:0;border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:0 16px;height:42px;font-size:16px;color:var(--ink)}
+.crow{display:flex;align-items:flex-end;gap:10px}
+.crow textarea{flex:1;min-width:0;resize:none;height:56px;border:1px solid #C7C9D9;border-radius:16px;padding:14px 16px;font-size:18px;background:var(--card);color:var(--ink)}
+.crow textarea:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-l)}
+.ib{width:56px;height:56px;border-radius:16px;border:0;background:var(--bg);color:var(--ink);display:flex;align-items:center;justify-content:center;position:relative}
+.ib svg{width:26px;height:26px}
+.ib.on{background:var(--purple-l);color:var(--purple-d)}
+.ib.send{background:var(--purple);color:#fff}
+.ib.send[disabled]{background:#C7C9D9}
+.ib .lk{position:absolute;right:6px;bottom:6px;width:16px;height:16px;border-radius:50%;background:var(--card);color:var(--faint);display:flex;align-items:center;justify-content:center}
+.ib .lk svg{width:12px;height:12px}
+.cnote{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:13.5px;font-weight:600}
+.chip svg{width:15px;height:15px}
+.c-ok{background:var(--green-l);color:#05603A}.c-wait{background:var(--orange-l);color:var(--orange-d)}.c-new{background:var(--purple-l);color:var(--purple-d)}.c-err{background:var(--red-l);color:#9B1C1C}.c-gray{background:var(--bg);color:var(--muted)}
+
+/* экранная клавиатура */
+.kbd{display:flex;flex-direction:column;gap:6px;background:#D9DAE3;border-radius:14px;padding:8px}
+.kbd .kr{display:flex;gap:6px;justify-content:center}
+.kbd button{height:46px;flex:1;max-width:72px;border:0;border-radius:9px;background:#fff;font-size:19px;color:var(--ink);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.kbd button.w{max-width:none;flex:6}
+.kbd button.m{max-width:120px;flex:1.6;background:#C4C6D3;font-size:15px}
+
+/* страницы разделов */
+.page{flex:1;min-width:0;overflow:auto;padding:24px 28px;display:flex;flex-direction:column;gap:18px}
+.page h2{margin:0;font-size:28px;color:var(--ink)}
+.page h3{margin:0;font-size:20px;color:var(--ink)}
+.lead{margin:-8px 0 0;color:var(--muted);max-width:760px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:var(--card);border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;align-items:center;gap:14px}
+.row .grow{flex:1;min-width:0}
+.li{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--line2)}
+.li:first-of-type{border-top:0}
+.li .grow{flex:1;min-width:0}
+.li b{display:block;color:var(--ink)}
+.li small{display:block;color:var(--muted);font-size:15px}
+.ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--purple-l);color:var(--purple-d)}
+.ico.g{background:var(--green-l);color:var(--green-d)}.ico.o{background:var(--orange-l);color:var(--orange-d)}.ico.b{background:var(--blue-l);color:var(--blue-d)}.ico.p{background:#FFEFF5;color:#C2185B}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;border:0;border-radius:14px;background:var(--purple);color:#fff;font-size:18px;font-weight:600;padding:0 24px}
+.btn.soft{background:var(--purple-l);color:var(--purple-d)}
+.btn.line{background:var(--card);color:var(--ink);border:1px solid #C7C9D9}
+.btn.green{background:var(--green-d)}
+.btn.red{background:var(--red)}
+.btn[disabled]{background:#C7C9D9;color:#fff}
+.money{font-size:34px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tile{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.tile b{color:var(--ink);font-size:18px}
+.tile small{color:var(--muted);font-size:15px}
+.tile.on{border-color:var(--purple);box-shadow:inset 0 0 0 1px var(--purple);background:#FBF8FF}
+.tile[disabled]{opacity:.55}
+.steps{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--faint);flex-wrap:wrap}
+.steps span{display:inline-flex;align-items:center;gap:4px}
+.steps span.done{color:var(--green-d);font-weight:600}
+.steps span.cur{color:var(--orange-d);font-weight:600}
+.sw{position:relative;width:60px;height:34px;border-radius:17px;border:0;background:#C7C9D9;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--green-d)}
+.sw.on::after{left:29px}
+.info{display:flex;gap:12px;align-items:flex-start;background:var(--blue-l);color:#123A7A;border-radius:14px;padding:12px 14px;font-size:16px}
+.info.warn{background:var(--orange-l);color:#7A4100}
+.info svg{width:22px;height:22px;margin-top:1px}
+
+/* окна поверх экрана */
+.veil{position:absolute;inset:0;background:rgba(28,28,40,.45);display:flex;align-items:center;justify-content:center;z-index:20}
+.sheet{width:640px;max-height:90%;overflow:auto;background:var(--card);border-radius:24px;padding:26px 28px;display:flex;flex-direction:column;gap:16px}
+.sheet h2{margin:0;font-size:26px;color:var(--ink)}
+.sheet p{margin:0;color:var(--muted)}
+.sheet .btns{display:flex;gap:12px;justify-content:flex-end}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:1px solid var(--line);background:var(--card);border-radius:12px;min-height:52px;padding:0 18px;font-size:17px;color:var(--ink)}
+.chips button.on{border-color:var(--purple);background:var(--purple-l);color:var(--purple-d);font-weight:600}
+.pad{display:grid;grid-template-columns:repeat(3,96px);gap:12px;justify-content:center}
+.pad button{height:72px;border:0;border-radius:18px;background:var(--bg);font-size:28px;font-weight:600;color:var(--ink)}
+.pad button.m{font-size:16px;font-weight:500;color:var(--muted)}
+.rec{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0}
+.rec .dot{width:96px;height:96px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 0 0 0 rgba(229,53,53,.4);animation:pulse 1.4s infinite}
+.rec .cam{width:420px;height:240px;border-radius:18px;background:linear-gradient(135deg,#2E2E3D,#4B3F75);display:flex;align-items:center;justify-content:center;color:#C9BEF0;font-size:16px;position:relative}
+.rec .cam::after{content:"● запись";position:absolute;top:12px;left:14px;color:#FF8A8A;font-size:14px;font-weight:600}
+.rec .t{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(229,53,53,.45)}70%{box-shadow:0 0 0 22px rgba(229,53,53,0)}100%{box-shadow:0 0 0 0 rgba(229,53,53,0)}}
+.calling{position:absolute;inset:0;z-index:25;background:linear-gradient(160deg,#2A1B5C,#1C1C28);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
+.calling .av{width:120px;height:120px;font-size:40px}
+.calling h2{margin:0;font-size:34px}
+.calling p{margin:0;color:#C9BEF0}
+.calling .t{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums}
+.calling .hang{width:84px;height:84px;border-radius:50%;border:0;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;margin-top:12px}
+.calling .hang svg{width:36px;height:36px}
+
+/* вход */
+.login{flex:1;display:grid;grid-template-columns:1fr 1fr;background:var(--card)}
+.login .l{padding:48px 56px;display:flex;flex-direction:column;gap:18px;background:linear-gradient(160deg,#F4EEFF,#FFFFFF 70%)}
+.login .clock{font-size:76px;font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.login .date{font-size:22px;color:var(--muted)}
+.login .say{margin-top:auto;font-size:30px;font-weight:700;color:var(--ink);line-height:1.2;max-width:460px}
+.login .say small{display:block;font-size:18px;font-weight:400;color:var(--muted);margin-top:10px}
+.login .r{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:32px}
+.face{width:300px;height:340px;border-radius:150px/170px;border:4px dashed #C9BEF0;display:flex;align-items:center;justify-content:center;color:var(--purple);position:relative;overflow:hidden}
+.face svg{width:120px;height:120px;opacity:.5}
+.face.scan::after{content:"";position:absolute;left:0;right:0;height:4px;background:var(--green);box-shadow:0 0 18px var(--green);animation:scan 1.2s ease-in-out infinite alternate}
+.face.ok{border-style:solid;border-color:var(--green)}
+@keyframes scan{from{top:8%}to{top:90%}}
+.pin{display:flex;gap:14px}
+.pin i{width:22px;height:22px;border-radius:50%;border:3px solid var(--purple);display:block}
+.pin i.f{background:var(--purple)}
+.toast{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:14px;padding:12px 20px;font-size:16px;z-index:30;max-width:70%;text-align:center}
+@media (prefers-reduced-motion: reduce){.rec .dot,.face.scan::after{animation:none}}
+</style>
+
+<div class="shell">
+  <div class="top">
+    <h1>ZT Рядом на терминале<small>Пространство человека в учреждении · прототип · данные общие с ОСНОВОЙ и кабинетом родственника</small></h1>
+    <span class="sp"></span>
+    <div class="who" id="who" role="group" aria-label="Кого показать"></div>
+  </div>
+  <div class="stage" id="stage"><div class="scaler" id="scaler"><div class="device"><div class="screen" id="scr"></div></div></div></div>
+  <div class="notes">
+    <div class="note"><h2>Что пройти на созвоне</h2><ol>
+      <li>Вход: <b>камера → «это вы?» → ПИН</b> (любые 4 цифры).</li>
+      <li>Переписка с мамой: вымаранные места, письма от руки, звонки — <b>те же, что видит мама</b>.</li>
+      <li>Ответить: готовой фразой или голосом. Статусы идут ускоренно, через минуту — ответ.</li>
+      <li>Голосовое закрыто замком → <b>заявление</b> → через ~20 с одобрено.</li>
+      <li>«Забота» → попросить маму подключить выпуск.</li>
+    </ol></div>
+    <div class="note"><h2>Сквозные данные</h2><p>Люди, письма, решения цензора, звонки, заявления и согласия берутся из общего набора ОСНОВЫ: <b>Сергей Романов</b> — сын мамы из демо-входа ZT Рядом, <b>Николай Волков</b> — приятель подруги оттуда же. Срез собирает <b>tools/срез-данных.js</b>.</p></div>
+    <div class="note"><h2>Что нарисовано</h2><p>Камера, запись голоса и видео, звонок и языки — имитация. Цены в [скобках] — заглушки. Ничего не сохраняется: перезагрузка возвращает всё к началу.</p></div>
+  </div>
+</div>
+
+<script>/*<SK_DATA>*/window.SK_DATA = {"собрано":"2026-10-02","учреждение":{"name":"ИК-5","short":"ФКУ ИК-5","full":"Федеральное казённое учреждение «Исправительная колония № 5»","city":"г. Северодвинск","parent":"Управление ФСИН России по Северному федеральному округу","отрядыСТерминалом":["Отряд 1","Отряд 2","Отряд 3","Отряд 4","Отряд 5","Отряд 6"]},"сизо":{"name":"СИЗО-2","short":"ФКУ СИЗО-2","full":"Федеральное казённое учреждение «Следственный изолятор № 2»","city":"г. Северодвинск","parent":"Управление ФСИН России по Северному федеральному округу"},"окноДней":90,"форматыДосуга":[["povest","Повесть с продолжением","по главе на каждый день, в конце недели он выбирает, как пойдёт сюжет","галочка А / Б / В",45],["zadachi","Задачник","судоку, японские, логические и шахматные задачи — у каждой одно решение","клетки",35],["tetrad","Рабочая тетрадь","английский, русский для иностранцев, счёт, память — сам по тетради","клетки и варианты",45],["marafon","Марафон «30 дней»","зарядка в камере, чтение, план на после — задание на каждый день","галочки",30],["enc","Энциклопедия по выпускам","история, космос, природа — выпуски складываются в книгу","викторина вариантами",40],["pol","Пополам с ребёнком","одна задача на двоих: половину решает он, половину — ребёнок дома","клетки",35]],"люди":[{"запись":["p163","Романов Сергей Владимирович","04.12.1999","Отряд 4","25.05.2026",1,1,null,[["Яковлева Лариса Павловна","мать","+7 9764460110",1],["Титов Павел","отец","+7 9401394653",1]],["Камера 128","подозреваемый",1],1,["бумага",175,[0,1],[1,1,1,1],null,[]]],"демоКонтакт":0,"переписка":[[102386,77,163,0,0,0,1,0],[105030,63,163,0,0,0,1,0],[105188,62,163,0,1,0,0,1],[106355,57,163,0,0,0,1,0],[107677,49,163,0,0,0,1,0],[109000,42,163,0,0,0,1,0],[110325,35,163,0,0,0,1,0],[110483,34,163,0,1,0,0,1],[111648,28,163,0,0,0,1,0],[111767,27,163,0,1,0,2,0],[112969,20,163,0,0,0,1,0],[113088,19,163,0,1,0,2,0],[114293,14,163,0,0,0,1,0],[115617,6,163,0,0,0,1,0],[115775,5,163,0,1,0,0,1]],"звонки":[[604,83,862,0,0,185,0],[1909,66,862,0,0,185,0],[3214,48,862,0,0,185,0],[4518,30,862,0,0,185,0],[5821,12,862,0,0,185,0]],"заявления":[["З-4299","p163","телефонные разговоры","подтверждено","05.09.2026",23],["З-4237","p163","видеосообщения","подтверждено","25.07.2026",65]],"подписки":[],"просьбы":[["p163",0,2,"tetrad"]]},{"запись":["p702","Волков Николай Максимович","10.11.1996","Отряд 8","22.03.2026",1,1,null,[["Павлова Мария Ильинична","мать","+7 9819666862",1],["Дмитриев Пётр","брат","+7 9529694175",0],["Егорова Наталья Николаевна","знакомая","+7 9220091819",1]],null,1,["терминал",103,[0,1,2],[1,1,1,1],null,[]]],"демоКонтакт":2,"переписка":[[100950,87,702,2,1,0,0,1],[101026,87,702,2,0,2,2,1],[101374,84,702,2,0,0,1,0],[102349,77,702,2,0,2,2,1],[102697,76,702,2,0,0,1,0],[103597,73,702,2,1,0,0,1],[104993,63,702,2,0,2,2,1],[105341,61,702,2,0,0,1,0],[106242,58,702,2,1,0,0,1],[106318,57,702,2,0,2,2,1],[107640,49,702,2,0,2,2,1],[108887,43,702,2,1,0,0,1],[109311,41,702,2,0,0,1,0],[110212,35,702,2,1,0,0,1],[110288,35,702,2,0,2,2,1],[111536,29,702,2,1,0,0,1],[112857,21,702,2,1,0,0,1],[114180,14,702,2,1,0,0,1],[114256,14,702,2,0,2,2,1],[114604,12,702,2,0,0,1,0],[115580,6,702,2,0,2,2,1]],"звонки":[[1646,69,627,2,0,708,0],[2951,51,627,2,0,708,0],[4255,33,627,2,0,708,0]],"заявления":[],"подписки":[],"просьбы":[]}]};/*</SK_DATA>*/</script>
+<script>
+const D=window.SK_DATA;
+
+/* ================= значки ================= */
+const P={
+  chat:'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+  phone:'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
+  doc:'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
+  heart:'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
+  users:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M17 11a3 3 0 1 0 0-6M22 21v-1a5 5 0 0 0-4-4.9',
+  mic:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
+  video:'M3 7h12v10H3zM15 10l6-3v10l-6-3',
+  send:'M4 12l16-8-6 16-2.5-6.5z',
+  kbd:'M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10',
+  lock:'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3',
+  check:'M5 12l5 5 9-10',
+  dcheck:'M2 12l5 5 9-10M12 16l1 1 9-10',
+  clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  exit:'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11',
+  printer:'M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z',
+  pen:'M4 20l4-1 11-11-3-3L5 16z',
+  plus:'M12 5v14M5 12h14',
+  wallet:'M3 7h17v13H3zM3 7l13-4v4M16 13h.01',
+  info:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01',
+  play:'M8 5v14l11-7z',
+  face:'M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  book:'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5',
+  grid:'M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16',
+  globe:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
+  x:'M6 6l12 12M18 6L6 18',
+  back:'M15 5l-7 7 7 7',
+  help:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 0 1 4.8 1c0 1.7-2.3 2-2.3 3.5M12 17h.01',
+  hang:'M3 14c5-5 13-5 18 0l-2.5 3-3.5-1.5V13a10 10 0 0 0-6 0v2.5L5.5 17z'
+};
+const ic=(n,s)=>`<svg width="${s||24}" height="${s||24}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+/* ================= помощники — те же, что в кабинете родственника ================= */
+function hash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+const MON=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const WDF=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+/* история набора кончается 27.09.2026: день д назад = 28.09 − д (как в ZT Рядом для родственника) */
+const BASE=new Date(2026,8,28);
+function dAgo(d){const x=new Date(BASE);x.setDate(x.getDate()-d);return x}
+const fmt=dt=>dt.getDate()+' '+MON[dt.getMonth()];
+const hm=t=>{const d=new Date(t);return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)};
+function dayLabel(t){const d=new Date(t),n=new Date(),y=new Date();y.setDate(n.getDate()-1);
+  if(d.toDateString()===n.toDateString())return 'Сегодня';if(d.toDateString()===y.toDateString())return 'Вчера';return fmt(d)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const rub=n=>n.toLocaleString('ru-RU')+' ₽';
+const mmss=s=>Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);
+const dur=s=>{const m=Math.floor(s/60),x=s%60;return m?m+' мин'+(x?' '+x+' с':''):x+' с'};
+
+/* ================= тексты писем =================
+   Ровно те же шаблоны и тот же выбор по хешу id письма, что в кабинете родственника:
+   письмо №115775 у мамы и у Сергея — одно и то же письмо. */
+const OUT_T={
+  parent:['{R}, здравствуй! У нас всё хорошо, все здоровы. На даче собрали картошку, яблок в этом году много. Очень ждём от тебя весточки.','Сынок, привет. Получила твоё письмо, спасибо. Не переживай за нас, мы справляемся. Береги себя, пей витамины.','Здравствуй, родной! Была у врача — всё в порядке. Соседка передаёт тебе привет. Пиши, как кормят, что нужно прислать.','Привет! Узнала про свидания — буду записываться на следующий месяц. Скажи, что тебе привезти.'],
+  wife:['Любимый, привет! Дети здоровы, Маша пошла в школу — очень гордая. Скучаем по тебе каждый день.','{R}, здравствуй. Получила твоё письмо, перечитала три раза. Мы справляемся, не волнуйся за нас.','Родной мой, как ты? Записалась на свидание, считаю дни. Напиши, что тебе привезти.','Привет! Посылаю фотографии — мы с детьми были у твоей мамы. Все передают тебе привет.'],
+  other:['{R}, привет! У нас всё по-старому, все здоровы. Держись, мы с тобой.','Здравствуй! Получили твоё письмо, спасибо. Пиши, что нужно прислать.','Привет! Узнали про свидания — постараемся приехать. Береги себя.']
+};
+const outSet=role=>role==='мать'||role==='отец'?OUT_T.parent:role==='жена'?OUT_T.wife:OUT_T.other;
+/* его письма; вторая фраза — та, которую может закрыть учреждение */
+const IN_T=[
+  ['Здравствуй! Письмо получил, спасибо.','В отряде говорят, что скоро переведут на другой участок.','У меня всё нормально, работаю, здоровье в порядке. Передавай всем привет.'],
+  ['Привет, родные! Фотографии повесил над кроватью, мужики говорят — красиво.','Сосед по койке просил узнать про его дело у адвоката.','Жду свидания, считаю дни.'],
+  ['Здравствуй! Не волнуйся за меня.','На прошлой неделе был шмон, забрали кипятильник.','Читаю книги из библиотеки, хожу в спортзал. Пришли, если можно, тёплые носки.'],
+  ['Спасибо за письмо и за деньги на счёт.','Здесь в магазине всё в два раза дороже, чем у вас.','Купил чай и конфеты. Скучаю по дому.'],
+  ['Привет! Погода у нас уже холодная, по утрам иней.','Начальник отряда опять придирается по мелочам.','Записался в кружок, учусь резьбе по дереву. Сделаю вам подарок.'],
+  ['Здравствуйте, мои дорогие! Письмо ваше читал перед сном.','Говорят, в следующем месяце будет проверка из управления.','Здоровье нормально, зубы вылечил. Передайте привет соседям.'],
+  ['Привет! Получил фотографии, долго смотрел.','Тут один парень из нашего отряда просил передать весточку его матери.','Очень соскучился. Напиши, как у вас дела дома.'],
+  ['Здравствуй! Спасибо за поддержку, без неё было бы тяжело.','В столовой на прошлой неделе была драка.','Я держусь, работаю, читаю. Жду свидания.']
+];
+/* почему учреждение закрыло фразу или не пропустило письмо — человеку объясняем, родным нет */
+const CUT_WHY=['сведения о порядке в учреждении','сведения о других людях в учреждении','просьба передать сведения третьим лицам'];
+const REJ_WHY=['в кадре были видны другие люди','упоминание другого человека в учреждении и его дела','сведения о распорядке и охране учреждения'];
+const REPLY_F=['Получила твоё сообщение! У нас всё хорошо, не волнуйся. Обнимаю.','Спасибо, что написал. Прочитала два раза. Ждём тебя.','Получила! Очень рада. Все передают привет.'];
+const REPLY_M=['Получил твоё сообщение! Всё хорошо, держись.','Спасибо, что написал. Ждём тебя.','Получил! Рад. Все передают привет.'];
+
+/* ================= люди ================= */
+const ROLE_W={мать:'Мама',отец:'Папа',жена:'Жена',сестра:'Сестра',брат:'Брат',дочь:'Дочь',сын:'Сын',знакомая:'Подруга',знакомый:'Друг'};
+const FEM=['мать','жена','сестра','дочь','знакомая'];
+const KIND={voice:'голосовые сообщения',video:'видеосообщения',calls:'телефонные разговоры',vvisit:'видеосвидание'};
+const FMT_ACC={povest:'повесть с продолжением',zadachi:'задачник',tetrad:'рабочую тетрадь',marafon:'марафон «30 дней»',enc:'энциклопедию по выпускам',pol:'задачи пополам с ребёнком'};
+const FMT_IC={povest:['book',''],zadachi:['grid','g'],tetrad:['pen','b'],marafon:['check','o'],enc:['globe','p'],pol:['heart','o']};
+const PRICE={reply:'[30 ₽]',voice:'[30 ₽]',video:'[45 ₽]',min:12};
+
+function person(i){
+  const ч=D.люди[i],r=ч.запись,parts=r[1].split(' ');
+  const sizo=r[9];
+  return {i,ч,id:r[0],name:r[1],last:parts[0],first:parts[1],io:parts[1]+' '+parts[2],dob:r[2],unit:r[3],confirmed:!!r[5],vt:!!r[6],
+    sizo:!!sizo,cell:sizo&&sizo[0],permit:sizo&&!!sizo[2],
+    inst:sizo?D.сизо:D.учреждение,
+    where:sizo?D.сизо.name+' · '+sizo[0].toLowerCase():D.учреждение.name+' · '+r[3].toLowerCase(),
+    consent:r[11]?r[11][3].slice():[0,0,0,0],consentFrom:r[11]?[r[11][0],r[11][1]]:null,
+    contacts:r[8].map((c,ci)=>c&&{ci,name:c[0],role:c[1],phone:c[2],verified:!!c[3],first:c[0].split(' ')[1]||c[0],
+      label:(c[1]==='мать'||c[1]==='отец')?ROLE_W[c[1]]:(c[0].split(' ')[1]||c[0]),
+      sub:(c[1]==='мать'||c[1]==='отец')?c[0]:(ROLE_W[c[1]]||c[1])+' · '+c[0],fem:FEM.includes(c[1])}).filter(Boolean)};
+}
+const maskPhone=p=>{const d=p.replace(/\D/g,'');return '+'+d.slice(0,d.length-10)+' '+d.slice(-10,-7)+' ••• '+d.slice(-4,-2)+' '+d.slice(-2)};
+const addressTo=c=>c.role==='мать'?'Мам':c.role==='отец'?'Пап':c.first;
+
+/* ================= состояние (только в памяти — прототип) ================= */
+let S;
+function fresh(i){
+  const p=person(i);
+  return {pi:i,stage:'face',pin:'',lang:'ru',tab:'chat',ci:D.люди[i].демоКонтакт,sent:[],reqs:[],calls:[],pleas:[],read:{},
+    consent:p.consent.slice(),draft:'',kbd:false,sheet:null,call:null,rec:null,toast:null,endAt:0,
+    card:340};   // карта для звонков от мамы — та же сумма, что в демо кабинета родственника
+}
+S=fresh(0);
+const ME=()=>person(S.pi);
+const C=ci=>ME().contacts.find(c=>c.ci===ci);
+
+/* доступ к связи: подтверждённое заявление или уже пользовался (по истории) */
+function access(kind){
+  const p=ME();
+  if(!p.vt&&kind!=='calls')return {ok:false,why:'на этом месте нет видеотерминала'};
+  if(kind==='calls'&&p.sizo&&!p.permit)return {ok:false,why:'в СИЗО звонки — только с разрешения следователя'};
+  const app=allApps().find(a=>a.want===KIND[kind]);
+  if(app&&app.status==='подтверждено')return {ok:true};
+  const used=kind==='voice'?p.ч.переписка.some(z=>z[4]===0&&z[5]===1):kind==='video'?p.ч.переписка.some(z=>z[4]===0&&z[5]===2):kind==='calls'?p.ч.звонки.length>0:false;
+  if(used)return {ok:true};
+  if(app)return {ok:false,pending:true,why:'заявление на '+KIND[kind]+' уже подано — ждёт решения учреждения'};
+  return {ok:false,apply:kind,why:'нужно заявление на '+KIND[kind]};
+}
+
+/* ================= лента ================= */
+const DEMO={checked:12e3,delivered:25e3,read:40e3,reply:60e3,approve:20e3};
+function feed(ci){
+  const p=ME(),c=C(ci),items=[],now=Date.now(),OT=outSet(c.role);
+  p.ч.переписка.filter(z=>z[3]===ci).forEach(z=>{
+    const fromThem=z[4]===1,ch=z[5],dec=z[6],dig=z[7]===1,h=hash('h'+z[0]);
+    const d=dAgo(z[1]);d.setHours(9+h%12,h%60);   // то же время, что у родственника
+    const m={kind:'msg',id:'h'+z[0],t:d.getTime(),ch,dec,dig,h,days:z[1]};
+    if(fromThem){
+      if(dec===2){items.push({kind:'ev',t:m.t,cls:'red',icon:'shield',text:'Письмо от '+(c.fem?'неё':'него')+' не пропустило учреждение',sub:'причину сообщат по запросу'});return}
+      m.me=false;m.text=OT[h%OT.length].replace('{R}',p.first);m.status=(!S.read[m.id]&&z[1]<=8)?'new':'seen';
+    }else{
+      const T=IN_T[h%IN_T.length];
+      m.me=true;m.parts=T;m.hand=!dig&&ch===0;m.status=dec===2?'rejected':'read';
+      if(dec===1)m.cutWhy=CUT_WHY[h%CUT_WHY.length];
+      if(dec===2)m.rejWhy=ch===2?REJ_WHY[0]:REJ_WHY[1+h%2];
+    }
+    items.push(m);
+  });
+  /* звонки — из архива переговоров ОСНОВЫ: тот же номер записи, что видит цензор */
+  p.ч.звонки.filter(z=>z[3]===ci).forEach(z=>{
+    const d=dAgo(z[1]);d.setHours(Math.floor(z[2]/60),z[2]%60);
+    items.push({kind:'ev',t:d.getTime(),icon:z[4]?'video':'phone',cls:z[6]?'warn':'',text:(z[4]?'Видеосвидание':'Разговор по телефону')+' · '+dur(z[5]),sub:z[6]?'прерван учреждением':'запись № '+z[0]});
+  });
+  /* перевод от мамы на лицевой счёт — тот же, что в истории операций у родственника */
+  if(ci===p.ч.демоКонтакт){const t=dAgo(21);t.setHours(19,5);items.push({kind:'ev',t:t.getTime(),cls:'green',icon:'wallet',text:(c.fem?'Перевела':'Перевёл')+' 1 000 ₽ на ваш лицевой счёт',sub:'деньги зачислит бухгалтерия учреждения'})}
+  /* бумажная просьба «подключи мне» — из общих данных досуга */
+  p.ч.просьбы.filter(q=>q[1]===ci).forEach(q=>{const t=dAgo(q[2]);t.setHours(11,5);
+    items.push({kind:'msg',id:'plea'+ci,me:true,t:t.getTime(),parts:[addressTo(c)+', если можно — подключи мне '+(FMT_ACC[q[3]]||'что-нибудь почитать')+'. Тут очень длинные дни.'],hand:true,status:'read',plea:true})});
+  /* новое за этот сеанс */
+  S.sent.filter(x=>x.ci===ci).forEach(x=>{
+    const age=now-x.t,st=age<DEMO.checked?'check':age<DEMO.delivered?'checked':age<DEMO.read?'delivered':'read';
+    items.push(Object.assign({kind:'msg',me:true,status:st},x));
+    if(age>=DEMO.reply&&x.ch===0){const h=hash(x.id),R=c.fem?REPLY_F:REPLY_M;
+      items.push({kind:'msg',id:x.id+'r',me:false,t:x.t+DEMO.reply,ch:0,dig:true,text:R[h%R.length],status:S.read[x.id+'r']?'seen':'new'})}
+  });
+  S.calls.filter(x=>x.ci===ci).forEach(x=>items.push({kind:'ev',t:x.t,icon:'phone',text:'Разговор по телефону · '+dur(x.sec),sub:'с карты для звонков · −'+rub(x.cost)}));
+  S.reqs.filter(q=>q.ci===ci&&q.inChat).forEach(q=>{
+    const ok=now-q.t>DEMO.approve;
+    items.push({kind:'ev',t:q.t,icon:q.icon,cls:ok?'green':'',text:q.text,sub:ok?q.okText:q.waitText});
+  });
+  return items.sort((a,b)=>a.t-b.t);
+}
+function unread(ci){return feed(ci).filter(m=>m.kind==='msg'&&!m.me&&m.status==='new').length}
+const unreadAll=()=>ME().contacts.reduce((s,c)=>s+unread(c.ci),0);
+function prepaid(ci){   // мама оплатила ответ к своему последнему письму, а он ещё не ответил
+  const f=feed(ci).filter(m=>m.kind==='msg');const last=f[f.length-1];
+  return last&&!last.me;
+}
+
+/* ================= заявления ================= */
+function allApps(){
+  const p=ME();
+  const base=p.ч.заявления.map(a=>({id:a[0],want:a[2],status:a[3],at:a[4],src:'data'}));
+  const live=S.reqs.filter(q=>q.app).map(q=>{const age=Date.now()-q.t;
+    return {id:q.id,want:q.want,status:age<DEMO.approve/2?'новое':age<DEMO.approve?'на подтверждении':'подтверждено',at:'сегодня, '+hm(q.t),src:'live',note:q.note}});
+  return live.concat(base);
+}
+const ST_CLS={'новое':'c-new','на подтверждении':'c-wait','подтверждено':'c-ok','отказано':'c-err'};
+
+/* ================= отрисовка ================= */
+const scr=document.getElementById('scr');
+function render(){
+  const p=ME();
+  if(S.stage!=='app'){scr.innerHTML=loginView(p)+toastView();return}
+  scr.innerHTML=barView(p)+`<div class="body">${railView()}<div class="main">${tabView(p)}</div></div>`+sheetView()+callView()+toastView();
+  afterRender();
+}
+function barView(p){
+  return `<div class="bar"><span class="brand"><span class="zt">ZT<i></i></span>Рядом</span>
+  <span class="place">${esc(p.where)} · терминал ${p.sizo?'корпуса':'отряда'}</span><span class="sp"></span>
+  <div class="langs" role="group" aria-label="Язык">${[['ru','Рус'],['uz','Oʻzbek'],['tj','Тоҷикӣ']].map(l=>`<button data-act="lang" data-v="${l[0]}" class="${S.lang===l[0]?'on':''}">${l[1]}</button>`).join('')}</div>
+  <span class="timer" id="timer">${ic('clock',20)}<span></span></span>
+  <button class="exit" data-act="logout">${ic('exit',20)}Выйти</button></div>`;
+}
+function railView(){
+  const un=unreadAll();
+  const t=[['chat','Переписка','chat',un],['calls','Звонки','phone',0],['apps','Заявления','doc',0],['care','Забота','heart',0],['family','Мои родные','users',0]];
+  return `<nav class="rail" aria-label="Разделы">${t.map(x=>`<button data-act="tab" data-v="${x[0]}" class="${S.tab===x[0]?'on':''}">${ic(x[2])}${x[1]}${x[3]?`<span class="badge">${x[3]}</span>`:''}</button>`).join('')}
+  <button class="help" data-act="help">${ic('help',24)}Помощь</button></nav>`;
+}
+function tabView(p){
+  if(S.tab==='chat')return peopleView(p)+chatView(p);
+  if(S.tab==='calls')return callsView(p);
+  if(S.tab==='apps')return appsView(p);
+  if(S.tab==='care')return careView(p);
+  return familyView(p);
+}
+const avCls=ci=>'av r'+(ci%4);
+const ini=c=>c.label[0];
+
+function peopleView(p){
+  const news=p.contacts.map(c=>[c,unread(c.ci)]).filter(x=>x[1]);
+  return `<section class="people" aria-label="Родные"><h2>Переписка</h2>
+  ${news.length?`<div class="while"><b>Пока вас не было</b>${news.map(x=>`${x[1]} ${x[1]===1?'новое письмо':'новых'} — ${esc(x[0].label)}`).join(', ')}</div>`:''}
+  <div class="plist">${p.contacts.map(c=>{const f=feed(c.ci),last=f.filter(m=>m.kind==='msg').pop(),u=unread(c.ci);
+    const prev=last?(last.me?'Вы: ':'')+(last.text||last.parts&&last.parts.join(' ')||(last.ch===1?'Голосовое':'Видеосообщение')):'Переписки пока нет';
+    return `<button class="pi ${S.ci===c.ci?'on':''}" data-act="open" data-v="${c.ci}"><span class="${avCls(c.ci)}">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${esc(prev)}</small></span><span class="side">${last?esc(dayLabel(last.t)):''}${u?`<span class="badge">${u}</span>`:''}</span></button>`}).join('')}</div></section>`;
+}
+
+function chatView(p){
+  const c=C(S.ci),calls=access('calls'),vv=access('vvisit');
+  return `<section class="chat" aria-label="Переписка с ${esc(c.label)}">
+  <div class="chead"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${esc(c.sub)} · ${c.verified?'номер подтверждён':'номер ещё не подтверждён'}</small></span>
+    <button class="act ${calls.ok&&c.verified?'green':'locked'}" data-act="call">${ic(calls.ok&&c.verified?'phone':'lock',22)}Позвонить</button>
+    <button class="act ${vv.ok?'':'locked'}" data-act="vvisit">${ic(vv.ok?'video':'lock',22)}Видеосвидание</button></div>
+  <div class="feed" id="feed">${feedHtml(S.ci)}</div>
+  ${composeView(c)}</section>`;
+}
+function feedHtml(ci){
+  const c=C(ci),f=feed(ci);
+  if(!f.length)return `<div class="empty"><b>Здесь будет переписка с ${esc(c.fem?'ней':'ним')}</b>Напишите первым. Сообщение проверит учреждение, потом оно придёт ${esc(c.label==='Мама'?'маме':c.first)} в приложение ZT Рядом на телефоне.</div>`;
+  let out='',day='';
+  f.forEach(m=>{const dl=dayLabel(m.t);if(dl!==day){day=dl;out+=`<div class="day">${esc(dl)}</div>`}out+=m.kind==='ev'?evHtml(m):msgHtml(m,c)});
+  return out;
+}
+function evHtml(e){return `<div class="ev ${e.cls||''}">${ic(e.icon||'info')}<span>${esc(e.text)}${e.sub?` <small>· ${esc(e.sub)}</small>`:''}</span><small>${hm(e.t)}</small></div>`}
+const STAT={check:['clock','На проверке в учреждении'],checked:['check','Проверено'],delivered:['dcheck','Доставлено'],read:['dcheck','Прочитано'],rejected:['x','Не пропущено']};
+function msgHtml(m,c){
+  let body;
+  if(m.ch===1||m.ch===2){
+    body=`<div class="media">${m.ch===2?`<span class="vid">${ic('play',28)}</span>`:`<button class="play" data-act="noop" aria-label="Прослушать">${ic('play',20)}</button><span class="wave"></span>`}<span>${m.ch===2?'Видеосообщение':'Голосовое'} · ${mmss(m.dur||(25+(m.h||0)%60))}</span></div>`;
+  }else if(m.me){
+    body=`<p>${m.parts.map((s,i)=>i===1&&m.cutWhy?`<span class="cut">${esc(s)}</span>`:esc(s)).join(' ')}</p>`;
+  }else body=`<p>${esc(m.text)}</p>`;
+  const tag=m.me&&m.hand?`<span class="tag">${ic('pen')}Написано от руки — учреждение перевело в текст</span>`
+    :!m.me&&m.dig===false&&m.days>0?`<span class="tag">${ic('printer')}Было вручено на бумаге</span>`:'';
+  const note=m.cutWhy?`<div class="why soft">Учреждение закрыло зачёркнутое: ${esc(m.cutWhy)}. ${esc(c.label)} ${c.fem?'получила':'получил'} письмо без этого места.</div>`
+    :m.rejWhy?`<div class="why">Не пропущено: ${esc(m.rejWhy)}. ${esc(c.label)} ${c.fem?'его не получила':'его не получил'}, деньги вернулись.</div>`:'';
+  const st=m.me?STAT[m.status]:null;
+  const meta=`<div class="meta ${m.status==='read'?'read':''}">${hm(m.t)}${st?ic(st[0])+esc(st[1]):''}</div>`;
+  return `<div class="msg ${m.me?'me':''} ${m.status==='rejected'?'bad':''}">${tag}${body}${note}${meta}</div>`;
+}
+function composeView(c){
+  const v=access('voice'),vi=access('video'),pp=prepaid(c.ci);
+  const QUICK=['Всё хорошо, не волнуйтесь','Получил, спасибо','Скучаю, жду свидания',addressTo(c)+', позвоню на выходных','Пришли фото'];
+  return `<div class="compose">
+  <div class="quick">${QUICK.map((q,i)=>`<button data-act="quick" data-v="${i}">${esc(q)}</button>`).join('')}</div>
+  <div class="crow">
+    <button class="ib ${S.kbd?'on':''}" data-act="kbd" aria-label="Экранная клавиатура">${ic('kbd')}</button>
+    <textarea id="draft" placeholder="Сообщение для ${esc(c.label==='Мама'?'мамы':c.label==='Папа'?'папы':c.first)}…" aria-label="Текст сообщения">${esc(S.draft)}</textarea>
+    <button class="ib" data-act="rec" data-v="voice" aria-label="Голосовое">${ic('mic')}${v.ok?'':`<span class="lk">${ic('lock')}</span>`}</button>
+    <button class="ib" data-act="rec" data-v="video" aria-label="Видеосообщение">${ic('video')}${vi.ok?'':`<span class="lk">${ic('lock')}</span>`}</button>
+    <button class="ib send" data-act="send" aria-label="Отправить" ${S.draft.trim()?'':'disabled'}>${ic('send')}</button>
+  </div>
+  <div class="cnote">${pp?`<span class="chip c-ok">${ic('check')}Ответ оплачен — ${esc(c.label==='Мама'?'мамой':c.label==='Папа'?'папой':c.first)}</span>`:`<span class="chip c-gray">Сообщение ${PRICE.reply} — с карты для звонков</span>`}<span>Каждое сообщение сначала проверяет учреждение.</span></div>
+  ${S.kbd?kbdView():''}</div>`;
+}
+function kbdView(){
+  const R=['йцукенгшщзхъ','фывапролджэ','ячсмитьбю.,'];
+  return `<div class="kbd" aria-label="Клавиатура">${R.map(r=>`<div class="kr">${[...r].map(k=>`<button data-act="key" data-v="${k}">${k}</button>`).join('')}</div>`).join('')}
+  <div class="kr"><button class="m" data-act="key" data-v="!">!</button><button class="m" data-act="key" data-v="?">?</button><button class="w" data-act="key" data-v=" ">пробел</button><button class="m" data-act="key" data-v="⌫">⌫ стереть</button><button class="m" data-act="kbd">Скрыть</button></div></div>`;
+}
+
+/* ---------- звонки ---------- */
+function callsView(p){
+  const a=access('calls');
+  const hist=p.contacts.flatMap(c=>p.ч.звонки.filter(z=>z[3]===c.ci).map(z=>({c,day:z[1],min:z[2],video:z[4],sec:z[5],cut:z[6],id:z[0]})));
+  hist.sort((x,y)=>x.day-y.day||y.min-x.min);
+  const live=S.calls.map(x=>`<div class="li"><span class="ico g">${ic('phone')}</span><span class="grow"><b>${esc(C(x.ci).label)} · ${dur(x.sec)}</b><small>сегодня, ${hm(x.t)} · −${rub(x.cost)}</small></span></div>`).join('');
+  const mom=p.contacts.find(c=>c.ci===p.ч.демоКонтакт);
+  return `<div class="page"><h2>Звонки</h2>
+  <p class="lead">Звоните родным с карты для звонков. Её пополняют они. Разговор слушает учреждение, длится не больше 15 минут (ст. 92 УИК РФ).</p>
+  ${p.sizo?`<div class="info ${p.permit?'':'warn'}">${ic('info')}<span>${p.permit?'Следователь разрешил вам телефонные разговоры.':'В СИЗО звонки — только с разрешения следователя или суда. Его может запросить ваш адвокат.'}</span></div>`:''}
+  <div class="grid2">
+    <div class="card"><h3>Карты для звонков</h3>
+      <div class="li"><span class="ico g">${ic('wallet')}</span><span class="grow"><b>От ${esc(mom.label==='Мама'?'мамы':mom.first)}</b><small>хватит примерно на ${Math.floor(S.card/PRICE.min)} мин · ${PRICE.min} ₽ за минуту</small></span><span class="money" style="font-size:26px">${rub(S.card)}</span></div>
+      <div class="li"><span class="ico">${ic('doc')}</span><span class="grow"><b>Бумажная карта</b><small>купленная в магазине учреждения — номер вводится на телефоне в ${p.sizo?'корпусе':'отряде'}</small></span></div>
+      <button class="btn soft" data-act="askcard">${ic('heart',22)}Попросить пополнить</button></div>
+    <div class="card"><h3>Кому можно звонить</h3>
+      ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${maskPhone(c.phone)} · ${c.verified?'номер подтверждён':'ждёт подтверждения'}</small></span>
+        <button class="act ${a.ok&&c.verified?'green':'locked'}" data-act="call" data-v="${c.ci}">${ic(a.ok&&c.verified?'phone':'lock',22)}Позвонить</button></div>`).join('')}
+      <button class="btn line" data-act="newapp" data-v="number">${ic('plus',22)}Добавить номер</button></div>
+  </div>
+  <div class="card"><h3>История разговоров</h3>${live}${hist.length?hist.map(x=>`<div class="li"><span class="ico ${x.cut?'o':'g'}">${ic(x.video?'video':'phone')}</span><span class="grow"><b>${esc(x.c.label)} · ${x.video?'видеосвидание':'разговор'} · ${dur(x.sec)}</b><small>${fmt(dAgo(x.day))}, ${('0'+Math.floor(x.min/60)).slice(-2)}:${('0'+x.min%60).slice(-2)}${x.cut?' · прерван учреждением':''}</small></span></div>`).join(''):'<p class="lead" style="margin:0">Разговоров пока не было.</p>'}</div>
+  </div>`;
+}
+
+/* ---------- заявления ---------- */
+const NEW_APPS=[
+  ['voice','Голосовые сообщения','записывать родным голосом до 90 с','mic',''],
+  ['video','Видеосообщения','короткое видео до 90 с','video','b'],
+  ['calls','Телефонные разговоры','звонить родным с карты','phone','g'],
+  ['vvisit','Видеосвидание','20 минут вживую по записи','video','p'],
+  ['number','Добавить номер','новый человек в списке разрешённых','plus','o'],
+  ['consent','Что видят родные','изменить, что показывать в ZT Рядом','shield','']
+];
+function appsView(p){
+  const list=allApps();
+  return `<div class="page"><h2>Заявления</h2>
+  <p class="lead">Заявление рассматривает учреждение. Обычно до 3 рабочих дней. Здесь видно, на каком оно шаге.</p>
+  <div class="tiles">${NEW_APPS.map(a=>{const ac=a[0]==='number'||a[0]==='consent'?{ok:false}:access(a[0]);
+    return `<button class="tile" data-act="newapp" data-v="${a[0]}"><span class="ico ${a[4]}">${ic(a[3])}</span><b>${a[1]}</b><small>${ac.ok?'<span class="chip c-ok">уже доступно</span>':esc(a[2])}</small></button>`}).join('')}</div>
+  <div class="card"><h3>Мои заявления</h3>
+  ${list.map(a=>`<div class="li"><span class="ico">${ic('doc')}</span><span class="grow"><b>${esc(cap(a.want))}</b><small>№ ${esc(a.id)} · ${esc(a.at)}${a.note?' · '+esc(a.note):''}</small>${a.src==='live'?stepsHtml(a.status):''}</span><span class="chip ${ST_CLS[a.status]||'c-gray'}">${esc(cap(a.status))}</span></div>`).join('')}
+  ${p.consentFrom?`<div class="li"><span class="ico">${ic('doc')}</span><span class="grow"><b>Заявление на связь и согласие</b><small>${p.consentFrom[0]==='бумага'?'на бумаге':'на терминале'} · ${fmt(dAgo(p.consentFrom[1]))} · с него началась ваша переписка в ZT Рядом</small></span><span class="chip c-ok">Действует</span></div>`:''}
+  </div></div>`;
+}
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function stepsHtml(st){const S3=['новое','на подтверждении','подтверждено'],k=S3.indexOf(st);
+  return `<div class="steps">${['Подано','Смотрит учреждение','Решение'].map((x,i)=>`<span class="${i<k||k===2?'done':i===k?'cur':''}">${i<=k?ic('check',14):''}${x}</span>`).join('<span>→</span>')}</div>`}
+
+/* ---------- забота ---------- */
+function careView(p){
+  const asked=p.ч.просьбы.map(q=>({ci:q[1],fmt:q[3],days:q[2]})).concat(S.pleas);
+  const F=D.форматыДосуга;
+  return `<div class="page"><h2>Забота каждый день</h2>
+  <p class="lead">Родные подключают выпуск, и раз в неделю, по четвергам, вам приносят листы на каждый день. На каждом листе — несколько слов от них. Ответы пишете на бланке и сдаёте в ящик.</p>
+  ${asked.map(q=>{const c=C(q.ci);return `<div class="info">${ic('info')}<span>Вы попросили ${esc(c.label==='Мама'?'маму':c.first)} подключить <b>${esc(FMT_ACC[q.fmt])}</b> — ${q.days!=null?fmt(dAgo(q.days)):'сегодня'}. Просьба в вашей переписке, ${c.fem?'она':'он'} увидит её с кнопкой «Подключить».</span></div>`}).join('')}
+  <div class="grid3">${F.map(f=>{const I=FMT_IC[f[0]]||['book',''];return `<div class="card"><div class="row"><span class="ico ${I[1]}">${ic(I[0])}</span><b style="color:var(--ink);font-size:19px">${esc(f[1])}</b></div><small style="color:var(--muted);font-size:15px">${esc(f[2])}. Ответ: ${esc(f[3])}.</small><button class="btn soft" data-act="plea" data-v="${f[0]}">Попросить подключить</button></div>`}).join('')}</div>
+  <p class="lead" style="margin:0">Первые два выпуска для родных бесплатно. Оценок и рейтингов нет: в ответ приходит только «засчитано».</p></div>`;
+}
+
+/* ---------- мои родные ---------- */
+const CONSENT=[['Имя и учреждение','без этого родные не увидят вас в ZT Рядом'],['Дата рождения','чтобы не забыли поздравить'],['Есть ли у вас видеотерминал','чтобы знали, что можно голосовые, видео и видеосвидания'],['«Забота каждый день»','чтобы видели, засчитаны ли ваши ответы']];
+function familyView(p){
+  const changed=S.consent.some((v,i)=>v!==p.consent[i]);
+  return `<div class="page"><h2>Мои родные</h2>
+  <div class="grid2">
+  <div class="card"><h3>Список разрешённых</h3><p class="lead" style="margin:0">Номера в список добавляете только вы — через заявление.</p>
+    ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.name)}</b><small>${esc(ROLE_W[c.role]||c.role)} · ${maskPhone(c.phone)}</small></span><span class="chip ${c.verified?'c-ok':'c-wait'}">${c.verified?'Подтверждён':'Ждёт подтверждения'}</span></div>`).join('')}
+    <button class="btn line" data-act="newapp" data-v="number">${ic('plus',22)}Добавить номер</button></div>
+  <div class="card"><h3>Что родные видят в ZT Рядом</h3><p class="lead" style="margin:0">Отряд, камеру, статью, срок и взыскания родные не видят никогда.</p>
+    ${CONSENT.map((x,i)=>`<div class="li"><span class="grow"><b>${x[0]}</b><small>${x[1]}</small></span><button class="sw ${S.consent[i]?'on':''}" data-act="consent" data-v="${i}" role="switch" aria-checked="${S.consent[i]?'true':'false'}" aria-label="${esc(x[0])}"></button></div>`).join('')}
+    ${changed?`<button class="btn" data-act="saveconsent">Подать заявление с изменениями</button>`:`<small style="color:var(--muted);font-size:14px">Последнее заявление: ${p.consentFrom?(p.consentFrom[0]==='бумага'?'на бумаге, ':'на терминале, ')+fmt(dAgo(p.consentFrom[1])):'—'}</small>`}</div>
+  </div></div>`;
+}
+
+/* ---------- окна ---------- */
+function sheetView(){
+  const s=S.sheet;if(!s)return '';
+  let h='';
+  if(s.type==='locked'){h=`<h2>${esc(s.title)}</h2><p>Сейчас недоступно: ${esc(s.why)}.</p>${s.apply?`<p>Подайте заявление — учреждение рассмотрит его, и функция откроется сама.</p><div class="btns"><button class="btn line" data-act="close">Позже</button><button class="btn" data-act="newapp" data-v="${s.apply}">Подать заявление</button></div>`:`<div class="btns"><button class="btn" data-act="close">Понятно</button></div>`}`}
+  if(s.type==='newapp'){const a=NEW_APPS.find(x=>x[0]===s.kind);
+    if(s.kind==='number')h=`<h2>Добавить номер</h2><p>Кто это для вас?</p><div class="chips">${['мама','папа','жена','брат','сестра','дочь','сын','друг'].map(r=>`<button data-act="role" data-v="${r}" class="${s.role===r?'on':''}">${r}</button>`).join('')}</div>
+      <p>Номер телефона</p><div style="font-size:30px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-height:40px">+7 ${esc(s.num||'')}<span style="color:var(--faint)">${'_'.repeat(Math.max(0,10-(s.num||'').length))}</span></div>
+      <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="num" data-v="${n}">${n}</button>`).join('')}<button class="m" data-act="num" data-v="c">стереть</button><button data-act="num" data-v="0">0</button><button class="m" data-act="close">отмена</button></div>
+      <div class="btns"><button class="btn" data-act="submitapp" ${s.role&&(s.num||'').length===10?'':'disabled'}>Подать заявление</button></div>`;
+    else if(s.kind==='consent'){S.tab='family';S.sheet=null;return ''}
+    else h=`<h2>Заявление: ${esc(a[1].toLowerCase())}</h2><p>${esc(cap(a[2]))}. Заявление уйдёт в учреждение, его рассмотрит сотрудник. Ответ появится здесь и в разделе «Заявления».</p>
+      <div class="info">${ic('info')}<span>В этом же заявлении сохранится, что видят родные. Сейчас: ${CONSENT.filter((x,i)=>S.consent[i]).map(x=>x[0].toLowerCase()).join(', ')||'ничего'}.</span></div>
+      <div class="btns"><button class="btn line" data-act="close">Отмена</button><button class="btn" data-act="submitapp">Подать заявление</button></div>`;
+  }
+  if(s.type==='rec'){const v=s.kind==='video';
+    h=`<h2>${v?'Видеосообщение':'Голосовое сообщение'} для ${esc(C(S.ci).label==='Мама'?'мамы':C(S.ci).first)}</h2><div class="rec">${v?'<div class="cam">камера терминала</div>':`<div class="dot">${ic('mic',40)}</div>`}<div class="t" id="rect">0:00</div><p>Не больше 90 секунд. Сообщение сначала прослушает учреждение.</p></div>
+      <div class="btns"><button class="btn line" data-act="close">Отменить</button><button class="btn" data-act="sendrec">${ic('send',22)}Отправить · ${v?PRICE.video:PRICE.voice}</button></div>`}
+  if(s.type==='vvisit'){const c=C(S.ci),days=[1,2,3,4,5].map(d=>{const x=new Date();x.setDate(x.getDate()+d);return x});
+    h=`<h2>Пригласить ${esc(c.label==='Мама'?'маму':c.first)} на видеосвидание</h2><p>20 минут вживую через этот терминал. ${c.fem?'Она':'Он'} подтвердит время и оплатит в приложении.</p>
+      <div class="chips">${days.map((d,i)=>`<button data-act="vday" data-v="${i}" class="${s.day===i?'on':''}">${WDF[d.getDay()]}, ${fmt(d)}</button>`).join('')}</div>
+      <div class="chips">${['10:00','11:20','14:00','15:20','16:40'].map(t=>`<button data-act="vtime" data-v="${t}" class="${s.time===t?'on':''}">${t}</button>`).join('')}</div>
+      <div class="btns"><button class="btn line" data-act="close">Отмена</button><button class="btn" data-act="sendvv" ${s.day!=null&&s.time?'':'disabled'}>Отправить приглашение</button></div>`}
+  if(s.type==='plea'){h=`<h2>Кого попросить?</h2><p>Попросить подключить «${esc(FMT_ACC[s.fmt])}». Просьба уйдёт в переписку — проверит учреждение, родные увидят её с кнопкой «Подключить».</p>
+      <div class="chips">${ME().contacts.map(c=>`<button data-act="pleato" data-v="${c.ci}">${esc(c.label)}</button>`).join('')}</div><div class="btns"><button class="btn line" data-act="close">Отмена</button></div>`}
+  if(s.type==='help'){h=`<h2>Помощь</h2><p>Терминал общий. Когда закончите — нажмите «Выйти». Если отойдёте, сеанс закроется сам.</p><p>Если терминал не работает или пропали деньги с карты — скажите сотруднику ${ME().sizo?'корпуса':'отряда'} или напишите письмо в поддержку ZT на бумаге.</p><div class="btns"><button class="btn" data-act="close">Понятно</button></div>`}
+  return `<div class="veil" data-act="veil"><div class="sheet" role="dialog" aria-modal="true">${h}</div></div>`;
+}
+function callView(){
+  if(!S.call)return '';const c=C(S.call.ci);
+  return `<div class="calling" role="dialog" aria-label="Звонок"><span class="${avCls(c.ci)}">${esc(ini(c))}</span><h2>${esc(c.label)}</h2><p>${maskPhone(c.phone)} · с карты для звонков</p>
+  <div class="t" id="callt">${S.call.on?'0:00':'Соединяем…'}</div><p>Разговор записывается и может прослушиваться учреждением · не дольше 15 минут</p>
+  <button class="hang" data-act="hang" aria-label="Завершить">${ic('hang')}</button></div>`;
+}
+function toastView(){return S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:''}
+
+/* ---------- вход ---------- */
+function loginView(p){
+  const now=new Date();
+  const r=S.stage==='face'?`<div class="face">${ic('face')}</div><button class="btn" data-act="scan">Посмотрите в рамку и нажмите</button>`
+    :S.stage==='scan'?`<div class="face scan">${ic('face')}</div><p style="color:var(--muted);margin:0">Узнаём…</p>`
+    :S.stage==='confirm'?`<div class="face ok">${ic('face')}</div><h2 style="margin:0;font-size:30px;color:var(--ink)">${esc(p.io)}, это вы?</h2><div style="display:flex;gap:12px"><button class="btn line" data-act="notme">Нет, не я</button><button class="btn" data-act="itsme">Да, это я</button></div>`
+    :`<h2 style="margin:0;font-size:28px;color:var(--ink)">Введите ПИН-код</h2><div class="pin">${[0,1,2,3].map(i=>`<i class="${S.pin.length>i?'f':''}"></i>`).join('')}</div>
+      <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-v="${n}">${n}</button>`).join('')}<button class="m" data-act="pin" data-v="c">стереть</button><button data-act="pin" data-v="0">0</button><button class="m" data-act="notme">выход</button></div>`;
+  return `<div class="bar"><span class="brand"><span class="zt">ZT<i></i></span>Рядом</span><span class="place">${esc(p.inst.short)} · ${esc(p.inst.city)}</span><span class="sp"></span>
+  <div class="langs">${[['ru','Рус'],['uz','Oʻzbek'],['tj','Тоҷикӣ']].map(l=>`<button data-act="lang" data-v="${l[0]}" class="${S.lang===l[0]?'on':''}">${l[1]}</button>`).join('')}</div></div>
+  <div class="login"><div class="l"><div class="clock">${hm(now)}</div><div class="date">${WDF[now.getDay()]}, ${fmt(now)}</div>
+  <div class="say">Ваши родные рядом.<small>Письма, голос, звонки и видеосвидания — в одном месте. Всё, что вы отправляете, сначала проверяет учреждение.</small></div></div>
+  <div class="r">${r}</div></div>`;
+}
+
+/* ================= действия ================= */
+function toast(t){S.toast=t;render();clearTimeout(toast.t);toast.t=setTimeout(()=>{S.toast=null;render()},2600)}
+function markRead(ci){feed(ci).forEach(m=>{if(m.kind==='msg'&&!m.me)S.read[m.id]=1})}
+function sendMsg(o){S.sent.push(Object.assign({id:'s'+Date.now(),t:Date.now(),ci:S.ci,ch:0,dig:true},o))}
+
+scr.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,v=b.dataset.v;
+  if(a==='veil'&&e.target!==b)return;
+  const p=ME();
+  switch(a){
+    case 'lang': if(v!=='ru'){toast('Перевод интерфейса на узбекский и таджикский — в следующей версии')}else{S.lang='ru';render()} break;
+    case 'scan': S.stage='scan';render();setTimeout(()=>{if(S.stage==='scan'){S.stage='confirm';render()}},1300);break;
+    case 'itsme': S.stage='pin';S.pin='';render();break;
+    case 'notme': S.stage='face';S.pin='';render();break;
+    case 'pin': if(v==='c')S.pin=S.pin.slice(0,-1);else if(S.pin.length<4)S.pin+=v;
+      if(S.pin.length===4){S.stage='app';S.endAt=Date.now()+15*60e3;S.tab='chat';}render();
+      if(S.stage==="app")setTimeout(()=>{markRead(S.ci);if(S.stage==="app"&&!S.sheet)render()},4000);break;
+    case 'logout': S=fresh(S.pi);render();break;
+    case 'tab': S.tab=v;S.sheet=null;render();break;
+    case 'open': S.ci=+v;S.draft='';render();setTimeout(()=>{markRead(+v);render()},2500);break;
+    case 'kbd': S.kbd=!S.kbd;render();break;
+    case 'key': {const t=document.getElementById('draft');S.draft=v==='⌫'?S.draft.slice(0,-1):S.draft+v;t.value=S.draft;syncSend();} break;
+    case 'quick': {const c=C(S.ci);const Q=['Всё хорошо, не волнуйтесь','Получил, спасибо','Скучаю, жду свидания',addressTo(c)+', позвоню на выходных','Пришли фото'];S.draft=(S.draft?S.draft+' ':'')+Q[+v]+'.';render();} break;
+    case 'send': if(!S.draft.trim())return;sendMsg({parts:[S.draft.trim()]});S.draft='';S.kbd=false;render();break;
+    case 'rec': {const ac=access(v);if(!ac.ok){S.sheet={type:'locked',title:v==='voice'?'Голосовые сообщения':'Видеосообщения',why:ac.why,apply:ac.apply};render();break}
+      S.sheet={type:'rec',kind:v,start:Date.now()};render();break}
+    case 'sendrec': {const sec=Math.max(3,Math.min(90,Math.round((Date.now()-S.sheet.start)/1000)));sendMsg({ch:S.sheet.kind==='video'?2:1,dur:sec});S.sheet=null;render();break}
+    case 'call': {const ci=v!=null?+v:S.ci,c=C(ci),ac=access('calls');
+      if(!ac.ok){S.sheet={type:'locked',title:'Звонки',why:ac.why,apply:ac.apply};render();break}
+      if(!c.verified){S.sheet={type:'locked',title:'Звонок',why:'номер '+c.label+' ещё не подтверждён учреждением'};render();break}
+      if(S.card<PRICE.min){toast('На карте для звонков не хватает денег — попросите пополнить');break}
+      S.call={ci,start:Date.now(),on:false};render();setTimeout(()=>{if(S.call){S.call.on=true;S.call.start=Date.now();render()}},1800);break}
+    case 'hang': {const c=S.call;if(c.on){const sec=Math.max(5,Math.round((Date.now()-c.start)/1000)),cost=Math.ceil(sec/60)*PRICE.min;S.card=Math.max(0,S.card-cost);S.calls.push({ci:c.ci,t:Date.now(),sec,cost})}S.call=null;render();break}
+    case 'vvisit': {const ac=access('vvisit');if(!ac.ok){S.sheet={type:'locked',title:'Видеосвидание',why:ac.why,apply:ac.apply};render();break}S.sheet={type:'vvisit',day:null,time:null};render();break}
+    case 'vday': S.sheet.day=+v;render();break;
+    case 'vtime': S.sheet.time=v;render();break;
+    case 'sendvv': {const d=new Date();d.setDate(d.getDate()+1+S.sheet.day);const c=C(S.ci);
+      S.reqs.push({id:'vv'+Date.now(),t:Date.now(),ci:S.ci,inChat:true,icon:'video',text:'Вы пригласили на видеосвидание: '+WDF[d.getDay()]+', '+fmt(d)+', '+S.sheet.time,
+        waitText:'ждём ответа '+(c.label==='Мама'?'мамы':c.first),okText:(c.fem?'подтвердила и оплатила':'подтвердил и оплатил')});S.sheet=null;S.tab='chat';render();break}
+    case 'newapp': S.sheet={type:'newapp',kind:v};if(v==='consent'){S.sheet=null;S.tab='family'}render();break;
+    case 'role': S.sheet.role=v;render();break;
+    case 'num': if(v==='c')S.sheet.num=(S.sheet.num||'').slice(0,-1);else if((S.sheet.num||'').length<10)S.sheet.num=(S.sheet.num||'')+v;render();break;
+    case 'submitapp': {const k=S.sheet.kind,n=4400+S.reqs.length;
+      S.reqs.push({id:'З-'+n,app:true,t:Date.now(),want:k==='number'?'добавить номер: '+S.sheet.role:KIND[k],note:k==='number'?'+7 '+S.sheet.num:'на терминале'});
+      S.sheet=null;S.tab='apps';toast('Заявление подано. Оно уже у сотрудника в ОСНОВЕ');break}
+    case 'consent': S.consent[+v]=S.consent[+v]?0:1;render();break;
+    case 'saveconsent': {const n=4400+S.reqs.length;S.reqs.push({id:'З-'+n,app:true,t:Date.now(),want:'что видят родные',note:'изменились галочки согласия'});
+      p.ч.запись[11][3]=S.consent.slice();toast('Заявление подано. Родные увидят изменения после проверки');break}
+    case 'plea': S.sheet={type:'plea',fmt:v};render();break;
+    case 'pleato': {const ci=+v,c=C(ci),f=S.sheet.fmt;S.pleas.push({ci,fmt:f,days:null});S.ci=ci;
+      sendMsg({ci,parts:[addressTo(c)+', если можно — подключи мне '+FMT_ACC[f]+'. Первые два выпуска бесплатно.'],plea:true});S.sheet=null;S.tab='chat';render();break}
+    case 'askcard': {const ci=p.ч.демоКонтакт,c=C(ci);S.ci=ci;sendMsg({ci,parts:[addressTo(c)+', если сможешь — пополни, пожалуйста, карту для звонков. Хочу почаще звонить.']});S.tab='chat';render();break}
+    case 'help': S.sheet={type:'help'};render();break;
+    case 'close': case 'veil': S.sheet=null;render();break;
+  }
+});
+scr.addEventListener('input',e=>{if(e.target.id==='draft'){S.draft=e.target.value;syncSend()}});
+scr.addEventListener('focusin',e=>{if(e.target.id==='draft'&&!S.kbd&&!scr.dataset.kbdOnce){scr.dataset.kbdOnce=1;S.kbd=true;render();const t=document.getElementById('draft');t.focus();t.setSelectionRange(t.value.length,t.value.length)}});
+function syncSend(){const s=scr.querySelector('[data-act="send"]');if(s)s.disabled=!S.draft.trim()}
+function afterRender(){const f=document.getElementById('feed');if(f)f.scrollTop=f.scrollHeight;tick()}
+
+/* раз в секунду: таймер сеанса, ускоренные статусы, запись, звонок */
+let lastSig='';
+function tick(){
+  if(S.stage!=='app')return;
+  const left=Math.max(0,Math.round((S.endAt-Date.now())/1000)),t=document.getElementById('timer');
+  if(t){t.querySelector('span').textContent='Сеанс '+mmss(left);t.classList.toggle('low',left<120)}
+  if(left===0){S=fresh(S.pi);render();return}
+  const r=document.getElementById('rect');if(r&&S.sheet)r.textContent=mmss(Math.min(90,Math.round((Date.now()-S.sheet.start)/1000)));
+  const ct=document.getElementById('callt');if(ct&&S.call&&S.call.on)ct.textContent=mmss(Math.round((Date.now()-S.call.start)/1000));
+}
+setInterval(()=>{
+  tick();
+  if(S.stage!=='app'||S.sheet||S.call)return;
+  /* перерисовываем только когда что-то сменило шаг — чтобы не сбивать набор текста */
+  const now=Date.now();
+  const sig=S.sent.map(x=>{const a=now-x.t;return a<DEMO.checked?0:a<DEMO.delivered?1:a<DEMO.read?2:a<DEMO.reply?3:4}).join()+'|'+S.reqs.map(q=>now-q.t>DEMO.approve?1:now-q.t>DEMO.approve/2?2:0).join();
+  if(sig!==lastSig){lastSig=sig;const ae=document.activeElement&&document.activeElement.id==='draft';render();if(ae){const d=document.getElementById('draft');d.focus();d.setSelectionRange(d.value.length,d.value.length)}}
+},1000);
+
+/* ================= подложка: выбор человека и масштаб ================= */
+function whoView(){
+  document.getElementById('who').innerHTML=D.люди.map((ч,i)=>{const p=person(i),c=p.contacts.find(x=>x.ci===ч.демоКонтакт);
+    return `<button class="${S.pi===i?'on':''}" data-i="${i}"><b>${esc(p.first+' '+p.last)}</b><span>${esc(p.inst.name)} · ${c.role==='мать'?'сын '+c.first.replace(/а$/,'ы'):'друг '+c.first.replace(/я$/,'и').replace(/а$/,'ы')}</span></button>`}).join('');
+}
+document.getElementById('who').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S=fresh(+b.dataset.i);whoView();render()});
+function fit(){const w=document.getElementById('stage').clientWidth,k=Math.min(1,w/1280),sc=document.getElementById('scaler');sc.style.transform='scale('+k+')';document.getElementById('stage').style.height=(800*k)+'px'}
+addEventListener('resize',fit);
+whoView();render();fit();
+</script>
+
+</body>
+</html>
