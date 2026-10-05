@@ -452,6 +452,9 @@ function person(i){
   return o;
 }
 /* номер разрешён? В колонии номера из СИЗО утверждаются заново — до решения контролёра звонков звонить нельзя */
+/* сколько можно потратить на звонок этому человеку: сначала его деньги, потом общие */
+function avail(ci){return (S.money.addr[ci]||0)+S.money.common}
+function spend(ci,sum){const a=S.money.addr[ci]||0,x=Math.min(a,sum);S.money.addr[ci]=a-x;S.money.common=Math.max(0,S.money.common-(sum-x))}
 function ver(c){if(!S.renumber)return c.verified;return S.renumber.keep.includes(c.ci)&&Date.now()-S.renumber.t>DEMO.approve}
 const maskPhone=p=>{const d=p.replace(/\D/g,'');return '+'+d.slice(0,d.length-10)+' '+d.slice(-10,-7)+' ••• '+d.slice(-4,-2)+' '+d.slice(-2)};
 const addressTo=c=>c.role==='мать'?'Мам':c.role==='отец'?'Пап':c.first;
@@ -462,7 +465,8 @@ function fresh(i){
   const p=person(i);
   return {pi:i,stage:'code',pin:'',cn:'',seen:false,keep:p.contacts.filter(c=>c.verified).map(c=>c.ci),renumber:p.firstTime?{t:Infinity,keep:[]}:null,lang:'ru',tab:'chat',ci:D.люди[i].демоКонтакт,sent:[],reqs:[],calls:[],pleas:[],read:{},
     consent:p.consent.slice(),draft:'',kbd:false,sheet:null,call:null,rec:null,toast:null,endAt:0,
-    card:340};   // счёт для звонков (пополняла мама) — та же сумма, что в демо кабинета родственника
+    /* деньги на звонки: у каждого родственника свои («только на звонки мне»), плюс общие («на звонки всем родным») */
+    money:{addr:{[D.люди[i].демоКонтакт]:340},common:120}};
 }
 S=fresh(0);
 const ME=()=>person(S.pi);
@@ -647,11 +651,12 @@ function callsView(p){
   ${p.sizo?`<div class="info ${p.permit?'':'warn'}">${ic('info')}<span>${p.permit?'Следователь разрешил вам телефонные разговоры.':'В СИЗО звонки — только с разрешения следователя или суда. Его может запросить ваш адвокат.'}</span></div>`:''}
   <div class="grid2">
     <div class="card"><h3>Деньги на звонки</h3>
-      <div class="li"><span class="ico g">${ic('wallet')}</span><span class="grow"><b>Счёт для звонков</b><small>хватит примерно на ${Math.floor(S.card/PRICE.min)} мин · ${PRICE.min} ₽ за минуту · пополняла ${esc(mom.label==='Мама'?'мама':mom.label==='Папа'?'папа':mom.first)}</small></span><span class="money" style="font-size:26px">${rub(S.card)}</span></div>
-      <div class="li"><span class="ico">${ic('heart')}</span><span class="grow"><b>Номер для пополнения: ${esc(topupNo(p))}</b><small>его можно дать родным — по нему только кладут деньги, позвонить по нему нельзя</small></span></div>
+      ${p.contacts.filter(c=>S.money.addr[c.ci]).map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label==='Мама'?'Мамины':c.label==='Папа'?'Папины':'От '+c.first.replace(/я$/,'и').replace(/а$/,'ы'))}</b><small>только на звонки ${esc(c.label==='Мама'?'маме':c.label==='Папа'?'папе':c.first.replace(/я$/,'е').replace(/а$/,'е'))} · ${Math.floor(S.money.addr[c.ci]/PRICE.min)} мин</small></span><span class="money" style="font-size:22px">${rub(S.money.addr[c.ci])}</span></div>`).join('')}
+      <div class="li"><span class="ico g">${ic('wallet')}</span><span class="grow"><b>Общие</b><small>на звонки всем родным · ${Math.floor(S.money.common/PRICE.min)} мин</small></span><span class="money" style="font-size:22px">${rub(S.money.common)}</span></div>
+      <div class="li"><span class="ico">${ic('heart')}</span><span class="grow"><b>Номер для пополнения: ${esc(topupNo(p))}</b><small>можно дать родным — по нему только кладут деньги. Каждый сам выбирает: «на звонки мне» или «всем родным»</small></span></div>
       <button class="btn soft" data-act="askcard">${ic('heart',22)}Попросить пополнить</button></div>
     <div class="card"><h3>Кому можно звонить</h3>
-      ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${maskPhone(c.phone)} · ${ver(c)?'номер подтверждён':'ждёт подтверждения'}</small></span>
+      ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${maskPhone(c.phone)} · ${ver(c)?Math.floor(avail(c.ci)/PRICE.min)+' мин':'ждёт подтверждения'}</small></span>
         <button class="act ${a.ok&&ver(c)?'green':'locked'}" data-act="call" data-v="${c.ci}">${ic(a.ok&&ver(c)?'phone':'lock',22)}Позвонить</button></div>`).join('')}
       <button class="btn line" data-act="newapp" data-v="number">${ic('plus',22)}Добавить номер</button></div>
   </div>
@@ -823,9 +828,9 @@ scr.addEventListener('click',e=>{
     case 'call': {const ci=v!=null?+v:S.ci,c=C(ci),ac=access('calls');
       if(!ac.ok){S.sheet={type:'locked',title:'Звонки',why:ac.why,apply:ac.apply};render();break}
       if(!ver(c)){S.sheet={type:'locked',title:'Звонок',why:'номер '+c.label+' ещё не подтверждён учреждением'};render();break}
-      if(S.card<PRICE.min){toast('На счёте для звонков не хватает денег — попросите пополнить');break}
+      if(avail(ci)<PRICE.min){toast('На звонки '+(c.label==='Мама'?'маме':c.first)+' не хватает денег — попросите пополнить');break}
       S.call={ci,start:Date.now(),on:false};render();setTimeout(()=>{if(S.call){S.call.on=true;S.call.start=Date.now();render()}},1800);break}
-    case 'hang': {const c=S.call;if(c.on){const sec=Math.max(5,Math.round((Date.now()-c.start)/1000)),cost=Math.ceil(sec/60)*PRICE.min;S.card=Math.max(0,S.card-cost);S.calls.push({ci:c.ci,t:Date.now(),sec,cost})}S.call=null;render();break}
+    case 'hang': {const c=S.call;if(c.on){const sec=Math.max(5,Math.round((Date.now()-c.start)/1000)),cost=Math.ceil(sec/60)*PRICE.min;spend(c.ci,cost);S.calls.push({ci:c.ci,t:Date.now(),sec,cost})}S.call=null;render();break}
     case 'vvisit': {const ac=access('vvisit');if(!ac.ok){S.sheet={type:'locked',title:'Видеосвидание',why:ac.why,apply:ac.apply};render();break}S.sheet={type:'vvisit',day:null,time:null};render();break}
     case 'vday': S.sheet.day=+v;render();break;
     case 'vtime': S.sheet.time=v;render();break;
