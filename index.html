@@ -599,7 +599,7 @@ function appsView(p){
 }
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function stepsHtml(st){const S3=['новое','на подтверждении','подтверждено'],k=S3.indexOf(st);
-  return `<div class="steps">${['Подано','Смотрит учреждение','Решение'].map((x,i)=>`<span class="${i<k||k===2?'done':i===k?'cur':''}">${i<=k?ic('check',14):''}${x}</span>`).join('<span>→</span>')}</div>`}
+  return `<div class="steps">${['Подано','Смотрит контролёр звонков','Решение'].map((x,i)=>`<span class="${i<k||k===2?'done':i===k?'cur':''}">${i<=k?ic('check',14):''}${x}</span>`).join('<span>→</span>')}</div>`}
 
 /* ---------- забота ---------- */
 function careView(p){
@@ -636,11 +636,15 @@ function sheetView(){
     if(s.kind==='number')h=`<h2>Добавить номер</h2><p>Кто это для вас?</p><div class="chips">${['мама','папа','жена','брат','сестра','дочь','сын','друг'].map(r=>`<button data-act="role" data-v="${r}" class="${s.role===r?'on':''}">${r}</button>`).join('')}</div>
       <p>Номер телефона</p><div style="font-size:30px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-height:40px">+7 ${esc(s.num||'')}<span style="color:var(--faint)">${'_'.repeat(Math.max(0,10-(s.num||'').length))}</span></div>
       <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="num" data-v="${n}">${n}</button>`).join('')}<button class="m" data-act="num" data-v="c">стереть</button><button data-act="num" data-v="0">0</button><button class="m" data-act="close">отмена</button></div>
+      <p style="font-size:15px">Номер проверит контролёр звонков, обычно до 3 дней. После одобрения звоните с телефона: номер карты и последние 4 цифры этого номера.</p>
       <div class="btns"><button class="btn" data-act="submitapp" ${s.role&&(s.num||'').length===10?'':'disabled'}>Подать заявление</button></div>`;
     else if(s.kind==='consent'){S.tab='family';S.sheet=null;return ''}
-    else h=`<h2>Заявление: ${esc(a[1].toLowerCase())}</h2><p>${esc(cap(a[2]))}. Заявление уйдёт в учреждение, его рассмотрит сотрудник. Ответ появится здесь и в разделе «Заявления».</p>
+    else h=`<h2>Заявление: ${esc(a[1].toLowerCase())}</h2><p>${esc(cap(a[2]))}. Заявление рассмотрит контролёр звонков, обычно до 3 дней. Ответ появится здесь и в разделе «Заявления».</p>
+      <div class="card" style="background:var(--soft);border:1px solid var(--line);gap:8px"><b style="color:var(--ink)">Договор на услуги связи</b>
+        <span style="font-size:15px;color:var(--muted)">Заявление и договор подписываются вместе, одной подписью. ZT уже подписал договор, учреждение подпишет, когда одобрит заявление. Звонки и сообщения оплачиваются с карты связи, которую пополняют родные.</span>
+        <button class="btn line" data-act="agree" style="justify-content:flex-start;gap:12px"><span class="sw ${s.agree?'on':''}" aria-hidden="true"></span>С условиями договора согласен</button></div>
       <div class="info">${ic('info')}<span>В этом же заявлении сохранится, что видят родные. Сейчас: ${CONSENT.filter((x,i)=>S.consent[i]).map(x=>x[0].toLowerCase()).join(', ')||'ничего'}.</span></div>
-      <div class="btns"><button class="btn line" data-act="close">Отмена</button><button class="btn" data-act="submitapp">Подать заявление</button></div>`;
+      <div class="btns"><button class="btn line" data-act="close">Отмена</button><button class="btn" data-act="submitapp" ${s.agree?'':'disabled'}>Подписать и подать</button></div>`;
   }
   if(s.type==='rec'){const v=s.kind==='video';
     h=`<h2>${v?'Видеосообщение':'Голосовое сообщение'} для ${esc(C(S.ci).label==='Мама'?'мамы':C(S.ci).first)}</h2><div class="rec">${v?'<div class="cam">камера терминала</div>':`<div class="dot">${ic('mic',40)}</div>`}<div class="t" id="rect">0:00</div><p>Не больше 90 секунд. Сообщение сначала прослушает учреждение.</p></div>
@@ -721,8 +725,9 @@ scr.addEventListener('click',e=>{
     case 'newapp': S.sheet={type:'newapp',kind:v};if(v==='consent'){S.sheet=null;S.tab='family'}render();break;
     case 'role': S.sheet.role=v;render();break;
     case 'num': if(v==='c')S.sheet.num=(S.sheet.num||'').slice(0,-1);else if((S.sheet.num||'').length<10)S.sheet.num=(S.sheet.num||'')+v;render();break;
+    case 'agree': S.sheet.agree=!S.sheet.agree;render();break;
     case 'submitapp': {const k=S.sheet.kind,n=4400+S.reqs.length;
-      S.reqs.push({id:'З-'+n,app:true,t:Date.now(),want:k==='number'?'добавить номер: '+S.sheet.role:KIND[k],note:k==='number'?'+7 '+S.sheet.num:'на терминале'});
+      S.reqs.push({id:'З-'+n,app:true,t:Date.now(),want:k==='number'?'добавить номер: '+S.sheet.role:KIND[k],note:k==='number'?'+7 '+S.sheet.num:'на терминале · договор подписан'});
       S.sheet=null;S.tab='apps';toast('Заявление подано. Оно уже у сотрудника в ОСНОВЕ');break}
     case 'consent': S.consent[+v]=S.consent[+v]?0:1;render();break;
     case 'saveconsent': {const n=4400+S.reqs.length;S.reqs.push({id:'З-'+n,app:true,t:Date.now(),want:'что видят родные',note:'изменились галочки согласия'});
