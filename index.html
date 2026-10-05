@@ -319,6 +319,12 @@ button{cursor:pointer}
 .login .r{justify-content:flex-start;padding:28px 24px;gap:18px}
 .face{width:240px;height:280px}
 .calling .av{width:110px;height:110px}
+/* карта ZT на экране входа */
+.zcard{width:300px;height:180px;border-radius:18px;background:linear-gradient(135deg,#683DCC,#3B1F8F);color:#fff;position:relative;padding:18px 20px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 14px 30px -14px rgba(60,30,140,.6)}
+.zcard b{font-size:26px;font-weight:800}
+.zcard span:last-child{font-size:18px;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.zcard .zq{position:absolute;right:18px;top:18px;width:64px;height:64px;border-radius:6px;background:#fff repeating-linear-gradient(90deg,#1C1C28 0 5px,transparent 5px 9px);box-shadow:inset 0 0 0 6px #fff}
+.zcard.reading{animation:pulse 1.2s infinite}
 /* подложка: терминал слева, пояснения справа */
 .duo{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
 .duo .notes{flex:1;min-width:260px;grid-template-columns:1fr}
@@ -335,7 +341,7 @@ button{cursor:pointer}
   <div class="stage" id="stage"><div class="scaler" id="scaler"><div class="device"><div class="screen" id="scr"></div></div></div></div>
   <div class="notes">
     <div class="note"><h2>Что пройти на созвоне</h2><ol>
-      <li>Вход: <b>камера → «это вы?» → ПИН</b> (любые 4 цифры).</li>
+      <li>Вход без распознавания лица: <b>карта к камере (или 12 цифр) → ПИН</b>. Сергей — впервые: «это вы?», свой ПИН, коротко что где, номера из СИЗО-2 на подтверждение. Николай — сразу ПИН (любые 4 цифры).</li>
       <li>Переписка с мамой: вымаранные места, письма от руки, звонки — <b>те же, что видит мама</b>.</li>
       <li>Ответить: готовой фразой или голосом. Статусы идут ускоренно, через минуту — ответ.</li>
       <li>Голосовое закрыто замком → <b>заявление</b> → через ~20 с одобрено.</li>
@@ -439,7 +445,7 @@ const PRICE={reply:'[30 ₽]',voice:'[30 ₽]',video:'[45 ₽]',min:12};
 function person(i){
   const ч=D.люди[i],r=ч.запись,parts=r[1].split(' ');
   const sizo=r[9];
-  return {i,ч,id:r[0],name:r[1],last:parts[0],first:parts[1],io:parts[1]+' '+parts[2],dob:r[2],unit:r[3],confirmed:!!r[5],vt:!!r[6],
+  const o={i,ч,id:r[0],name:r[1],last:parts[0],first:parts[1],io:parts[1]+' '+parts[2],dob:r[2],unit:r[3],confirmed:!!r[5],vt:!!r[6],
     sizo:!!sizo,cell:sizo&&sizo[0],permit:sizo&&!!sizo[2],
     inst:sizo?D.сизо:D.учреждение,
     where:sizo?D.сизо.name+' · '+sizo[0].toLowerCase():D.учреждение.name+' · '+r[3].toLowerCase(),
@@ -447,7 +453,12 @@ function person(i){
     contacts:r[8].map((c,ci)=>c&&{ci,name:c[0],role:c[1],phone:c[2],verified:!!c[3],first:c[0].split(' ')[1]||c[0],
       label:(c[1]==='мать'||c[1]==='отец')?ROLE_W[c[1]]:(c[0].split(' ')[1]||c[0]),
       sub:(c[1]==='мать'||c[1]==='отец')?c[0]:(ROLE_W[c[1]]||c[1])+' · '+c[0],fem:FEM.includes(c[1])}).filter(Boolean)};
+  /* демо: Сергея перевели из СИЗО-2 в ИК-5 — он впервые у терминала, договор и карта из СИЗО действуют */
+  if(o.id==='p163'){o.sizo=false;o.cell=null;o.permit=null;o.inst=D.учреждение;o.where=D.учреждение.name+' · '+o.unit.toLowerCase();o.from=D.сизо.name;o.firstTime=true}
+  return o;
 }
+/* номер разрешён? В колонии номера из СИЗО утверждаются заново — до решения контролёра звонков звонить нельзя */
+function ver(c){if(!S.renumber)return c.verified;return S.renumber.keep.includes(c.ci)&&Date.now()-S.renumber.t>DEMO.approve}
 const maskPhone=p=>{const d=p.replace(/\D/g,'');return '+'+d.slice(0,d.length-10)+' '+d.slice(-10,-7)+' ••• '+d.slice(-4,-2)+' '+d.slice(-2)};
 const addressTo=c=>c.role==='мать'?'Мам':c.role==='отец'?'Пап':c.first;
 
@@ -455,7 +466,7 @@ const addressTo=c=>c.role==='мать'?'Мам':c.role==='отец'?'Пап':c.f
 let S;
 function fresh(i){
   const p=person(i);
-  return {pi:i,stage:'face',pin:'',lang:'ru',tab:'chat',ci:D.люди[i].демоКонтакт,sent:[],reqs:[],calls:[],pleas:[],read:{},
+  return {pi:i,stage:'card',pin:'',cn:'',np:'',np2:'',np2on:false,pinSet:false,keep:p.contacts.filter(c=>c.verified).map(c=>c.ci),renumber:p.firstTime?{t:Infinity,keep:[]}:null,lang:'ru',tab:'chat',ci:D.люди[i].демоКонтакт,sent:[],reqs:[],calls:[],pleas:[],read:{},
     consent:p.consent.slice(),draft:'',kbd:false,sheet:null,call:null,rec:null,toast:null,endAt:0,
     card:340};   // карта для звонков от мамы — та же сумма, что в демо кабинета родственника
 }
@@ -579,8 +590,8 @@ function peopleView(p){
 function chatView(p){
   const c=C(S.ci),calls=access('calls'),vv=access('vvisit');
   return `<section class="chat" aria-label="Переписка с ${esc(c.label)}">
-  <div class="chead"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${esc(c.sub)} · ${c.verified?'номер подтверждён':'номер ещё не подтверждён'}</small></span>
-    <button class="act ${calls.ok&&c.verified?'green':'locked'}" data-act="call">${ic(calls.ok&&c.verified?'phone':'lock',22)}Позвонить</button>
+  <div class="chead"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${esc(c.sub)} · ${ver(c)?'номер подтверждён':'номер ещё не подтверждён'}</small></span>
+    <button class="act ${calls.ok&&ver(c)?'green':'locked'}" data-act="call">${ic(calls.ok&&ver(c)?'phone':'lock',22)}Позвонить</button>
     <button class="act ${vv.ok?'':'locked'}" data-act="vvisit">${ic(vv.ok?'video':'lock',22)}Видеосвидание</button></div>
   <div class="feed" id="feed">${feedHtml(S.ci)}</div>
   ${composeView(c)}</section>`;
@@ -646,8 +657,8 @@ function callsView(p){
       <div class="li"><span class="ico">${ic('doc')}</span><span class="grow"><b>Бумажная карта</b><small>купленная в магазине учреждения — номер вводится на телефоне в ${p.sizo?'корпусе':'отряде'}</small></span></div>
       <button class="btn soft" data-act="askcard">${ic('heart',22)}Попросить пополнить</button></div>
     <div class="card"><h3>Кому можно звонить</h3>
-      ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${maskPhone(c.phone)} · ${c.verified?'номер подтверждён':'ждёт подтверждения'}</small></span>
-        <button class="act ${a.ok&&c.verified?'green':'locked'}" data-act="call" data-v="${c.ci}">${ic(a.ok&&c.verified?'phone':'lock',22)}Позвонить</button></div>`).join('')}
+      ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${maskPhone(c.phone)} · ${ver(c)?'номер подтверждён':'ждёт подтверждения'}</small></span>
+        <button class="act ${a.ok&&ver(c)?'green':'locked'}" data-act="call" data-v="${c.ci}">${ic(a.ok&&ver(c)?'phone':'lock',22)}Позвонить</button></div>`).join('')}
       <button class="btn line" data-act="newapp" data-v="number">${ic('plus',22)}Добавить номер</button></div>
   </div>
   <div class="card"><h3>История разговоров</h3>${live}${hist.length?hist.map(x=>`<div class="li"><span class="ico ${x.cut?'o':'g'}">${ic(x.video?'video':'phone')}</span><span class="grow"><b>${esc(x.c.label)} · ${x.video?'видеосвидание':'разговор'} · ${dur(x.sec)}</b><small>${fmt(dAgo(x.day))}, ${('0'+Math.floor(x.min/60)).slice(-2)}:${('0'+x.min%60).slice(-2)}${x.cut?' · прерван учреждением':''}</small></span></div>`).join(''):'<p class="lead" style="margin:0">Разговоров пока не было.</p>'}</div>
@@ -696,7 +707,7 @@ function familyView(p){
   return `<div class="page"><h2>Мои родные</h2>
   <div class="grid2">
   <div class="card"><h3>Список разрешённых</h3><p class="lead" style="margin:0">Номера в список добавляете только вы — через заявление.</p>
-    ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.name)}</b><small>${esc(ROLE_W[c.role]||c.role)} · ${maskPhone(c.phone)}</small></span><span class="chip ${c.verified?'c-ok':'c-wait'}">${c.verified?'Подтверждён':'Ждёт подтверждения'}</span></div>`).join('')}
+    ${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.name)}</b><small>${esc(ROLE_W[c.role]||c.role)} · ${maskPhone(c.phone)}</small></span><span class="chip ${ver(c)?'c-ok':'c-wait'}">${ver(c)?'Подтверждён':'Ждёт подтверждения'}</span></div>`).join('')}
     <button class="btn line" data-act="newapp" data-v="number">${ic('plus',22)}Добавить номер</button></div>
   <div class="card"><h3>Что родные видят в ZT Рядом</h3><p class="lead" style="margin:0">Отряд, камеру, статью, срок и взыскания родные не видят никогда.</p>
     ${CONSENT.map((x,i)=>`<div class="li"><span class="grow"><b>${x[0]}</b><small>${x[1]}</small></span><button class="sw ${S.consent[i]?'on':''}" data-act="consent" data-v="${i}" role="switch" aria-checked="${S.consent[i]?'true':'false'}" aria-label="${esc(x[0])}"></button></div>`).join('')}
@@ -745,19 +756,48 @@ function callView(){
 function toastView(){return S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:''}
 
 /* ---------- вход ---------- */
+/* ---------- вход: без распознавания лица ----------
+   Ключ — карта ZT, которую человек получил вместе с комплектом документов.
+   Камера терминала (та же, что для видео) читает QR-код на карте; можно
+   набрать 12 цифр. Потом ПИН. В первый раз ПИН человек придумывает сам,
+   а терминал коротко показывает, что где, и просит подтвердить номера:
+   в колонии разрешённые номера утверждаются заново. */
+const cardNo=p=>{let s='',h=hash(p.id+':карта');for(let i=0;i<12;i++){if(i%7===6)h=hash(p.id+':карта'+i);s+=h%10;h=Math.floor(h/10)}return s};
+const cardFmt=s=>s.replace(/(\d{4})(?=\d)/g,'$1 ');
+const PINPAD=(act,extra)=>`<div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="${act}" data-v="${n}">${n}</button>`).join('')}<button class="m" data-act="${act}" data-v="c">стереть</button><button data-act="${act}" data-v="0">0</button>${extra||'<button class="m" data-act="notme">выход</button>'}</div>`;
+const DOTS=(n,len)=>`<div class="pin">${Array.from({length:len||4},(_,i)=>`<i class="${n>i?'f':''}"></i>`).join('')}</div>`;
 function loginView(p){
-  const now=new Date();
-  const r=S.stage==='face'?`<div class="face">${ic('face')}</div><button class="btn" data-act="scan">Посмотрите в рамку и нажмите</button>`
-    :S.stage==='scan'?`<div class="face scan">${ic('face')}</div><p style="color:var(--muted);margin:0">Узнаём…</p>`
-    :S.stage==='confirm'?`<div class="face ok">${ic('face')}</div><h2 style="margin:0;font-size:30px;color:var(--ink)">${esc(p.io)}, это вы?</h2><div style="display:flex;gap:12px"><button class="btn line" data-act="notme">Нет, не я</button><button class="btn" data-act="itsme">Да, это я</button></div>`
-    :`<h2 style="margin:0;font-size:28px;color:var(--ink)">Введите ПИН-код</h2><div class="pin">${[0,1,2,3].map(i=>`<i class="${S.pin.length>i?'f':''}"></i>`).join('')}</div>
-      <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-act="pin" data-v="${n}">${n}</button>`).join('')}<button class="m" data-act="pin" data-v="c">стереть</button><button data-act="pin" data-v="0">0</button><button class="m" data-act="notme">выход</button></div>`;
+  const now=new Date(),H=t=>`<h2 style="margin:0;font-size:26px;color:var(--ink);text-align:center">${t}</h2>`,P=t=>`<p style="margin:0;color:var(--muted);text-align:center;max-width:560px">${t}</p>`;
+  let r='';
+  if(S.stage==='card')r=`<div class="zcard"><span class="zq"></span><b>ZT</b><span>${esc(cardFmt(cardNo(p)).replace(/\d{4} \d{4} /,'•••• •••• '))}</span></div>
+    ${H('Поднесите карту к камере')}${P('Камера над экраном прочитает QR-код на карте. Или наберите номер карты — 12 цифр.')}
+    <div style="display:flex;gap:12px"><button class="btn line" data-act="cardnum">Набрать номер</button><button class="btn" data-act="cardscan">Поднести карту</button></div>
+    ${P('Нет карты? Её выдают в приёмном отделении вместе с договором и заявлением.')}`;
+  if(S.stage==='reading')r=`<div class="zcard reading"><span class="zq"></span><b>ZT</b><span>читаю…</span></div>${H('Читаю карту…')}`;
+  if(S.stage==='cardnum')r=`${H('Номер карты')}<div style="font-size:30px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--ink)">${esc(cardFmt(S.cn.padEnd(12,'_')))}</div>${PINPAD('cn','<button class="m" data-act="tocard">назад</button>')}`;
+  if(S.stage==='hello')r=`${H('Здравствуйте, '+esc(p.io)+'!')}${P('Вы впервые на терминале. Это вы?')}
+    <div class="card" style="width:100%;max-width:560px;gap:6px">
+      <div class="li"><span class="ico g">${ic('check')}</span><span class="grow"><b>${esc(p.name)}</b><small>${esc(p.dob)} · прибыли из ${esc(p.from)}</small></span></div>
+      <div class="li"><span class="ico g">${ic('wallet')}</span><span class="grow"><b>Карта ${esc(cardFmt(cardNo(p)).slice(-4))} — та же, что в ${esc(p.from)}</b><small>баланс и номер карты сохранились</small></span></div>
+      <div class="li"><span class="ico g">${ic('doc')}</span><span class="grow"><b>Договор подписан в ${esc(p.from)}</b><small>заново подписывать не нужно</small></span></div></div>
+    <div style="display:flex;gap:12px"><button class="btn line" data-act="notme">Это не я</button><button class="btn" data-act="itsme">Да, это я</button></div>`;
+  if(S.stage==='newpin')r=`${H(S.np.length<4||!S.np2on?'Придумайте ПИН из 4 цифр':'Повторите ПИН')}${P('Он нужен каждый раз после карты. Не говорите его никому.')}${DOTS((S.np2on?S.np2:S.np).length)}${PINPAD('np')}`;
+  if(S.stage==='tour')r=`${H('Что здесь есть')}
+    <div class="grid2" style="width:100%">${[['chat','Переписка','письма и голосовые родным — проверяет учреждение'],['phone','Звонки','с телефона в отряде, как раньше: номер карты и 4 последние цифры номера'],['doc','Заявления','связь, номера, что видят родные — подаются здесь'],['heart','Забота','попросить родных подключить выпуски на бумаге']]
+      .map(x=>`<div class="card" style="gap:4px"><span class="ico">${ic(x[0])}</span><b style="color:var(--ink)">${x[1]}</b><small style="color:var(--muted);font-size:14px">${x[2]}</small></div>`).join('')}</div>
+    <button class="btn" data-act="tournext">Дальше</button>`;
+  if(S.stage==='numbers')r=`${H('Номера из '+esc(p.from))}${P('В колонии разрешённые номера утверждают заново. Отметьте, кому хотите звонить, — заявление уйдёт контролёру звонков.')}
+    <div class="card" style="width:100%;max-width:600px;gap:0">${p.contacts.map(c=>`<div class="li"><span class="${avCls(c.ci)} sm">${esc(ini(c))}</span><span class="grow"><b>${esc(c.label)}</b><small>${esc(c.sub)} · ${maskPhone(c.phone)}</small></span><button class="sw ${S.keep.includes(c.ci)?'on':''}" data-act="keep" data-v="${c.ci}" role="switch" aria-checked="${S.keep.includes(c.ci)}" aria-label="${esc(c.label)}"></button></div>`).join('')}</div>
+    <div style="display:flex;gap:12px"><button class="btn line" data-act="numskip">Позже</button><button class="btn" data-act="numsubmit" ${S.keep.length?'':'disabled'}>Подать заявление · ${S.keep.length}</button></div>`;
+  if(S.stage==='pin')r=`${H(esc(p.io))}${P('Карта '+esc(cardFmt(cardNo(p)).slice(-4))+' · введите ПИН')}${DOTS(S.pin.length)}${PINPAD('pin')}`;
   return `<div class="bar"><span class="brand"><span class="zt">ZT<i></i></span>Рядом</span><span class="place">${esc(p.inst.short)} · ${esc(p.inst.city)}</span><span class="sp"></span>
   <div class="langs">${[['ru','Рус'],['uz','Oʻzbek'],['tj','Тоҷикӣ']].map(l=>`<button data-act="lang" data-v="${l[0]}" class="${S.lang===l[0]?'on':''}">${l[1]}</button>`).join('')}</div></div>
   <div class="login"><div class="l"><div class="clock">${hm(now)}</div><div class="date">${WDF[now.getDay()]}, ${fmt(now)}</div>
   <div class="say">Ваши родные рядом.<small>Письма, голос, звонки и видеосвидания — в одном месте. Всё, что вы отправляете, сначала проверяет учреждение.</small></div></div>
   <div class="r">${r}</div></div>`;
 }
+function afterCard(){const p=ME();S.stage=p.firstTime&&!S.pinSet?'hello':'pin';S.pin='';render()}
+function enterApp(){S.stage='app';S.endAt=Date.now()+15*60e3;S.tab='chat';render();setTimeout(()=>{markRead(S.ci);if(S.stage==='app'&&!S.sheet)render()},4000)}
 
 /* ================= действия ================= */
 function toast(t){S.toast=t;render();clearTimeout(toast.t);toast.t=setTimeout(()=>{S.toast=null;render()},2600)}
@@ -771,12 +811,25 @@ scr.addEventListener('click',e=>{
   const p=ME();
   switch(a){
     case 'lang': if(v!=='ru'){toast('Перевод интерфейса на узбекский и таджикский — в следующей версии')}else{S.lang='ru';render()} break;
-    case 'scan': S.stage='scan';render();setTimeout(()=>{if(S.stage==='scan'){S.stage='confirm';render()}},1300);break;
-    case 'itsme': S.stage='pin';S.pin='';render();break;
-    case 'notme': S.stage='face';S.pin='';render();break;
+    case 'cardscan': S.stage='reading';render();setTimeout(()=>{if(S.stage==='reading')afterCard()},1100);break;
+    case 'cardnum': S.stage='cardnum';S.cn='';render();break;
+    case 'tocard': S.stage='card';render();break;
+    case 'cn': if(v==='c')S.cn=S.cn.slice(0,-1);else if(S.cn.length<12)S.cn+=v;
+      if(S.cn.length===12)afterCard();else render();break;   // в прототипе подходит любой номер
+    case 'itsme': S.stage='newpin';S.np='';S.np2='';S.np2on=false;render();break;
+    case 'notme': S=fresh(S.pi);render();break;
+    case 'np': {const k=S.np2on?'np2':'np';if(v==='c')S[k]=S[k].slice(0,-1);else if(S[k].length<4)S[k]+=v;
+      if(!S.np2on&&S.np.length===4)S.np2on=true;
+      else if(S.np2on&&S.np2.length===4){if(S.np2===S.np){S.pinSet=true;S.stage='tour'}else{S.np='';S.np2='';S.np2on=false;render();toast('ПИН не совпал. Придумайте ещё раз');break}}
+      render();break}
+    case 'tournext': S.stage='numbers';render();break;
+    case 'keep': {const ci=+v;S.keep=S.keep.includes(ci)?S.keep.filter(x=>x!==ci):S.keep.concat(ci);render();break}
+    case 'numsubmit': S.renumber={t:Date.now(),keep:S.keep.slice()};
+      S.reqs.push({id:'З-'+(4400+S.reqs.length),app:true,t:Date.now(),want:'номера из '+p.from+': '+S.keep.length,note:'подтвердить в '+p.inst.name});
+      enterApp();toast('Заявление на номера подано. Контролёр звонков подтвердит их в колонии');break;
+    case 'numskip': enterApp();break;
     case 'pin': if(v==='c')S.pin=S.pin.slice(0,-1);else if(S.pin.length<4)S.pin+=v;
-      if(S.pin.length===4){S.stage='app';S.endAt=Date.now()+15*60e3;S.tab='chat';}render();
-      if(S.stage==="app")setTimeout(()=>{markRead(S.ci);if(S.stage==="app"&&!S.sheet)render()},4000);break;
+      if(S.pin.length===4)enterApp();else render();break;
     case 'logout': S=fresh(S.pi);render();break;
     case 'tab': S.tab=v;S.sheet=null;render();break;
     case 'open': S.ci=+v;S.draft='';render();setTimeout(()=>{markRead(+v);render()},2500);break;
@@ -789,7 +842,7 @@ scr.addEventListener('click',e=>{
     case 'sendrec': {const sec=Math.max(3,Math.min(90,Math.round((Date.now()-S.sheet.start)/1000)));sendMsg({ch:S.sheet.kind==='video'?2:1,dur:sec});S.sheet=null;render();break}
     case 'call': {const ci=v!=null?+v:S.ci,c=C(ci),ac=access('calls');
       if(!ac.ok){S.sheet={type:'locked',title:'Звонки',why:ac.why,apply:ac.apply};render();break}
-      if(!c.verified){S.sheet={type:'locked',title:'Звонок',why:'номер '+c.label+' ещё не подтверждён учреждением'};render();break}
+      if(!ver(c)){S.sheet={type:'locked',title:'Звонок',why:'номер '+c.label+' ещё не подтверждён учреждением'};render();break}
       if(S.card<PRICE.min){toast('На карте для звонков не хватает денег — попросите пополнить');break}
       S.call={ci,start:Date.now(),on:false};render();setTimeout(()=>{if(S.call){S.call.on=true;S.call.start=Date.now();render()}},1800);break}
     case 'hang': {const c=S.call;if(c.on){const sec=Math.max(5,Math.round((Date.now()-c.start)/1000)),cost=Math.ceil(sec/60)*PRICE.min;S.card=Math.max(0,S.card-cost);S.calls.push({ci:c.ci,t:Date.now(),sec,cost})}S.call=null;render();break}
@@ -844,7 +897,7 @@ setInterval(()=>{
 /* ================= подложка: выбор человека и масштаб ================= */
 function whoView(){
   document.getElementById('who').innerHTML=D.люди.map((ч,i)=>{const p=person(i),c=p.contacts.find(x=>x.ci===ч.демоКонтакт);
-    return `<button class="${S.pi===i?'on':''}" data-i="${i}"><b>${esc(p.first+' '+p.last)}</b><span>${esc(p.inst.name)} · ${c.role==='мать'?'сын '+c.first.replace(/а$/,'ы'):'друг '+c.first.replace(/я$/,'и').replace(/а$/,'ы')}</span></button>`}).join('');
+    return `<button class="${S.pi===i?'on':''}" data-i="${i}"><b>${esc(p.first+' '+p.last)}</b><span>${p.firstTime?'впервые у терминала · из '+esc(p.from):'пользуется регулярно · '+esc(p.inst.name)}</span></button>`}).join('');
 }
 document.getElementById('who').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S=fresh(+b.dataset.i);whoView();render()});
 function fit(){const sh=document.querySelector(".shell").clientWidth-32,wide=sh>=1000,aw=wide?sh-320:sh,k=Math.min(1,aw/800,Math.max(.42,(innerHeight-100)/1280)),st=document.getElementById("stage");document.getElementById("scaler").style.transform="scale("+k+")";st.style.width=(800*k)+"px";st.style.height=(1280*k)+"px"}
